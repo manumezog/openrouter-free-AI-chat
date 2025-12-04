@@ -19,14 +19,14 @@ A sleek, user-friendly Python CLI tool for interactive conversations with multip
 
 All models are **100% free** on OpenRouter:
 
-| # | Model | Provider |
-|---|-------|----------|
-| 1 | **DeepSeek R1 Turbo** ⭐ | Recommended |
-| 2 | Llama 2 70B | Meta |
-| 3 | Mistral 7B | Mistral AI |
-| 4 | Neural Chat 7B | Intel |
-| 5 | Toppy M 7B | Teknium |
-| 6 | Qwen 7B Chat | Alibaba |
+| #   | Model                    | Provider    |
+| --- | ------------------------ | ----------- |
+| 1   | **DeepSeek R1 Turbo** ⭐ | Recommended |
+| 2   | Llama 2 70B              | Meta        |
+| 3   | Mistral 7B               | Mistral AI  |
+| 4   | Neural Chat 7B           | Intel       |
+| 5   | Toppy M 7B               | Teknium     |
+| 6   | Qwen 7B Chat             | Alibaba     |
 
 ## ⚙️ Prerequisites
 
@@ -62,40 +62,28 @@ echo "OPENROUTER_API_KEY=your_api_key_here" > .env
 ```
 
 **To get your API key:**
+
 1. Visit [openrouter.ai](https://openrouter.ai)
 2. Sign up for a free account
 3. Go to Settings → Keys
 4. Copy your API key
-5. Paste it in the `.env` file
+5. # Paste it in the `.env` file
+   # AVAILABLE FREE MODELS
+6. DeepSeek R1 Turbo (Recommended)
+7. Llama 2 70B
+8. Mistral 7B
+9. Neural Chat 7B
+10. Toppy M 7B
+11. # Qwen 7B Chat
+    Select a model (1-6): 1
+    ✓ Selected: DeepSeek R1 Turbo (Recommended)
 
-## 🎯 Quick Start
-
-### Run the Script
-
-```bash
-python openRouterFreeAIchat.py
-```
-
-### Select a Model
-
-```
-================================================================================
-AVAILABLE FREE MODELS
-================================================================================
-1. DeepSeek R1 Turbo (Recommended)
-2. Llama 2 70B
-3. Mistral 7B
-4. Neural Chat 7B
-5. Toppy M 7B
-6. Qwen 7B Chat
-================================================================================
-Select a model (1-6): 1
-✓ Selected: DeepSeek R1 Turbo (Recommended)
 ```
 
 ### Start Chatting
 
 ```
+
 ================================================================================
 Enter your question (or 'quit' to exit): What is machine learning?
 
@@ -104,11 +92,12 @@ Sending request...
 ────────────────────────────────────────────────────────────────────────────────
 ANSWER:
 ────────────────────────────────────────────────────────────────────────────────
-Machine learning is a subset of artificial intelligence that enables computer 
+Machine learning is a subset of artificial intelligence that enables computer
 systems to learn and improve from experience without being explicitly programmed...
 ────────────────────────────────────────────────────────────────────────────────
 ✓ Saved to conversation_log.jsonl
-```
+
+````
 
 Continue asking questions or type `quit` to exit.
 
@@ -127,7 +116,7 @@ All conversations are automatically saved to `conversation_log.jsonl` in **JSON 
   "status_code": 200,
   "response": "Machine learning is a subset of artificial intelligence..."
 }
-```
+````
 
 ### Read Logs with Python
 
@@ -160,6 +149,7 @@ cat conversation_log.jsonl | wc -l
 ### Main Functions
 
 #### `display_model_selection()`
+
 Displays available models and returns user's selection with both the model ID and friendly name.
 
 ```python
@@ -167,6 +157,7 @@ model_id, model_name = display_model_selection()
 ```
 
 #### `send_question(question, model_id)`
+
 Sends a question to the OpenRouter API using the specified model.
 
 ```python
@@ -174,6 +165,7 @@ response = send_question("Your question?", "model-id")
 ```
 
 #### `format_response(response_json)`
+
 Extracts the answer text from the API's JSON response with error handling.
 
 ```python
@@ -181,6 +173,7 @@ answer = format_response(response.json())
 ```
 
 #### `save_log(question, status_code, response_text, model_id, model_name)`
+
 Saves conversation entries to the log file with complete metadata.
 
 ```python
@@ -216,6 +209,7 @@ log_file = "my_conversations.jsonl"  # Custom filename
 ### ❌ ModuleNotFoundError: No module named 'requests'
 
 **Solution:**
+
 ```bash
 pip install requests
 ```
@@ -223,6 +217,7 @@ pip install requests
 ### ❌ ModuleNotFoundError: No module named 'dotenv'
 
 **Solution:**
+
 ```bash
 pip install python-dotenv
 ```
@@ -230,6 +225,7 @@ pip install python-dotenv
 ### ❌ Error: "OPENROUTER_API_KEY not found"
 
 **Solutions:**
+
 1. Ensure `.env` file exists in the same directory as the script
 2. Check that the file contains: `OPENROUTER_API_KEY=your_key`
 3. Restart the script after creating/editing `.env`
@@ -237,6 +233,7 @@ pip install python-dotenv
 ### ❌ API Error 401: Unauthorized
 
 **Solutions:**
+
 1. Verify your API key is correct
 2. Check it's not expired
 3. Regenerate from [openrouter.ai/settings](https://openrouter.ai/settings)
@@ -248,6 +245,7 @@ pip install python-dotenv
 ### ❌ No response received
 
 **Solutions:**
+
 1. Check your internet connection
 2. Verify the OpenRouter API is online
 3. Try a different model
@@ -337,6 +335,7 @@ for model, stats in model_stats.items():
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to:
+
 - Report bugs
 - Suggest new features
 - Submit pull requests
@@ -362,6 +361,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 If you encounter issues:
+
 1. Check the [Troubleshooting](#-troubleshooting) section
 2. Review your `.env` configuration
 3. Verify your API key has quota remaining

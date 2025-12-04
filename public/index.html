@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Free AI chat interface powered by OpenRouter's free models. Access multiple AI models in a beautiful, modern interface."
+    />
+    <title>OpenRouter Free AI Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- API Key Setup Modal -->
+    <div id="api-key-modal" class="modal">
+      <div class="modal-content">
+        <h2>🔑 OpenRouter API Key Required</h2>
+        <p>To use this chat interface, you need an OpenRouter API key.</p>
+        <ol>
+          <li>
+            Visit
+            <a href="https://openrouter.ai/" target="_blank" rel="noopener"
+              >OpenRouter.ai</a
+            >
+          </li>
+          <li>Sign up for a free account</li>
+          <li>Generate an API key from your dashboard</li>
+          <li>Paste it below</li>
+        </ol>
+        <input type="password" id="api-key-input" placeholder="sk-or-v1-..." />
+        <button id="save-api-key-btn" class="primary-btn">Save API Key</button>
+      </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+      <!-- Left Sidebar - Conversation History -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h1>💬 Conversations</h1>
+          <button
+            id="new-conversation-btn"
+            class="icon-btn"
+            title="New Conversation"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+        <div id="conversations-list" class="conversations-list">
+          <!-- Conversations will be dynamically loaded here -->
+        </div>
+      </aside>
+
+      <!-- Main Chat Area -->
+      <main class="chat-container">
+        <!-- Header with Model Selector -->
+        <header class="chat-header">
+          <div class="model-selector-container">
+            <label for="model-selector">🤖 Model:</label>
+            <select id="model-selector" class="model-select">
+              <option value="">Loading models...</option>
+            </select>
+          </div>
+          <div class="header-actions">
+            <button id="settings-btn" class="icon-btn" title="Settings">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Messages Area -->
+        <div id="messages-container" class="messages-container">
+          <div class="welcome-screen">
+            <h2>Welcome to OpenRouter Free AI Chat! 🚀</h2>
+            <p>Select a model above and start chatting with free AI models.</p>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <span class="feature-icon">🤖</span>
+                <h3>Multiple Models</h3>
+                <p>Access all free models from OpenRouter</p>
+              </div>
+              <div class="feature-card">
+                <span class="feature-icon">💾</span>
+                <h3>Conversation History</h3>
+                <p>All chats saved locally in your browser</p>
+              </div>
+              <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3>Fast & Simple</h3>
+                <p>Clean interface, no signup required</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-container">
+          <textarea
+            id="message-input"
+            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+            rows="1"
+          ></textarea>
+          <button id="send-btn" class="send-btn" title="Send Message">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
