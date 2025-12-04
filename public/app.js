@@ -25,6 +25,11 @@ const elements = {
   messageInput: document.getElementById("message-input"),
   sendBtn: document.getElementById("send-btn"),
   settingsBtn: document.getElementById("settings-btn"),
+  // Mobile sidebar elements
+  sidebar: document.getElementById("sidebar"),
+  sidebarOverlay: document.getElementById("sidebar-overlay"),
+  mobileMenuToggle: document.getElementById("mobile-menu-toggle"),
+  sidebarCloseBtn: document.getElementById("sidebar-close-btn"),
 };
 
 // ===========================
@@ -151,6 +156,10 @@ const ConversationManager = {
     localStorage.setItem("current_conversation_id", conversationId);
     UI.renderMessages();
     UI.renderConversations();
+    // Close sidebar on mobile after selecting conversation
+    if (typeof closeMobileSidebar === "function") {
+      closeMobileSidebar();
+    }
   },
 
   saveConversations() {
@@ -509,6 +518,34 @@ elements.apiKeyInput.addEventListener("keypress", (event) => {
     handleSaveApiKey();
   }
 });
+
+// ===========================
+// Mobile Sidebar Functions
+// ===========================
+function openMobileSidebar() {
+  elements.sidebar.classList.add("open");
+  elements.sidebarOverlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+}
+
+function closeMobileSidebar() {
+  elements.sidebar.classList.remove("open");
+  elements.sidebarOverlay.classList.remove("active");
+  document.body.style.overflow = "";
+}
+
+// Mobile sidebar event listeners
+if (elements.mobileMenuToggle) {
+  elements.mobileMenuToggle.addEventListener("click", openMobileSidebar);
+}
+
+if (elements.sidebarCloseBtn) {
+  elements.sidebarCloseBtn.addEventListener("click", closeMobileSidebar);
+}
+
+if (elements.sidebarOverlay) {
+  elements.sidebarOverlay.addEventListener("click", closeMobileSidebar);
+}
 
 // ===========================
 // Initialization

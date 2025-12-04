@@ -40,27 +40,49 @@
 
     <!-- Main Container -->
     <div class="app-container">
+      <!-- Mobile Sidebar Overlay -->
+      <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
       <!-- Left Sidebar - Conversation History -->
-      <aside class="sidebar">
+      <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
           <h1>💬 Conversations</h1>
-          <button
-            id="new-conversation-btn"
-            class="icon-btn"
-            title="New Conversation"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button
+              id="new-conversation-btn"
+              class="icon-btn"
+              title="New Conversation"
             >
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <button
+              id="sidebar-close-btn"
+              class="sidebar-close-btn"
+              title="Close Menu"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
         <div id="conversations-list" class="conversations-list">
           <!-- Conversations will be dynamically loaded here -->
@@ -71,6 +93,14 @@
       <main class="chat-container">
         <!-- Header with Model Selector -->
         <header class="chat-header">
+          <!-- Mobile Menu Toggle -->
+          <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Menu">
+            <div class="hamburger-icon">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </button>
           <div class="model-selector-container">
             <label for="model-selector">🤖 Model:</label>
             <select id="model-selector" class="model-select">
