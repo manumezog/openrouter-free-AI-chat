@@ -1,4 +1,4 @@
-# Free AI Interactive Chat with multiple model options
+# AI Interactive Chat with multiple Free model options
 
 A sleek, user-friendly Python CLI tool for interactive conversations with multiple free AI models through the [OpenRouter API](https://openrouter.ai/).
 
