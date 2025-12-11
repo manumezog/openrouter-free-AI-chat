@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Free AI chat interface powered by OpenRouter's free models. Access multiple AI models in a beautiful, modern interface."
+      content="Free AI chat interface powered by OpenRouter's free models. Compare responses from two AI models side-by-side."
     />
-    <title>OpenRouter Free AI Chat</title>
+    <title>OpenRouter Free AI Chat - Model Comparison</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -92,7 +92,7 @@
 
       <!-- Main Chat Area -->
       <main class="chat-container">
-        <!-- Header with Model Selector -->
+        <!-- Header with Dual Model Selectors -->
         <header class="chat-header">
           <!-- Mobile Menu Toggle -->
           <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Menu">
@@ -102,12 +102,24 @@
               <span></span>
             </div>
           </button>
-          <div class="model-selector-container">
-            <label for="model-selector">🤖 Model:</label>
-            <select id="model-selector" class="model-select">
-              <option value="">Loading models...</option>
-            </select>
+          
+          <!-- Dual Model Selectors -->
+          <div class="dual-model-selectors">
+            <div class="model-selector-container model-a">
+              <label for="model-selector-a">🅰️ Model A:</label>
+              <select id="model-selector-a" class="model-select">
+                <option value="">Loading models...</option>
+              </select>
+            </div>
+            <div class="vs-divider">VS</div>
+            <div class="model-selector-container model-b">
+              <label for="model-selector-b">🅱️ Model B:</label>
+              <select id="model-selector-b" class="model-select">
+                <option value="">Loading models...</option>
+              </select>
+            </div>
           </div>
+          
           <div class="header-actions">
             <button id="settings-btn" class="icon-btn" title="Settings">
               <svg
@@ -125,26 +137,69 @@
           </div>
         </header>
 
-        <!-- Messages Area -->
-        <div id="messages-container" class="messages-container">
-          <div class="welcome-screen">
-            <h2>Welcome to OpenRouter Free AI Chat! 🚀</h2>
-            <p>Select a model above and start chatting with free AI models.</p>
-            <div class="feature-grid">
-              <div class="feature-card">
-                <span class="feature-icon">🤖</span>
-                <h3>Multiple Models</h3>
-                <p>Access all free models from OpenRouter</p>
+        <!-- Comparison Container - Split Screen -->
+        <div class="comparison-container">
+          <!-- Panel A -->
+          <div class="comparison-panel panel-a">
+            <div class="panel-header">
+              <span class="panel-label">🅰️ Model A</span>
+              <span id="panel-a-model-name" class="panel-model-name">Select a model</span>
+            </div>
+            <div id="messages-container-a" class="messages-container">
+              <div class="welcome-screen">
+                <h2>Compare AI Models! 🔄</h2>
+                <p>Select two models above and start chatting to compare their responses side-by-side.</p>
+                <div class="feature-grid">
+                  <div class="feature-card">
+                    <span class="feature-icon">⚖️</span>
+                    <h3>Side-by-Side</h3>
+                    <p>Compare responses in real-time</p>
+                  </div>
+                  <div class="feature-card">
+                    <span class="feature-icon">🚀</span>
+                    <h3>Parallel Requests</h3>
+                    <p>Both models respond simultaneously</p>
+                  </div>
+                  <div class="feature-card">
+                    <span class="feature-icon">💾</span>
+                    <h3>Save History</h3>
+                    <p>All comparisons saved locally</p>
+                  </div>
+                </div>
               </div>
-              <div class="feature-card">
-                <span class="feature-icon">💾</span>
-                <h3>Conversation History</h3>
-                <p>All chats saved locally in your browser</p>
-              </div>
-              <div class="feature-card">
-                <span class="feature-icon">⚡</span>
-                <h3>Fast & Simple</h3>
-                <p>Clean interface, no signup required</p>
+            </div>
+          </div>
+          
+          <!-- Panel Divider -->
+          <div class="panel-divider"></div>
+          
+          <!-- Panel B -->
+          <div class="comparison-panel panel-b">
+            <div class="panel-header">
+              <span class="panel-label">🅱️ Model B</span>
+              <span id="panel-b-model-name" class="panel-model-name">Select a model</span>
+            </div>
+            <div id="messages-container-b" class="messages-container">
+              <div class="welcome-screen">
+                <h2>Ready to Compare! ⚡</h2>
+                <p>Type a message below to see how different AI models respond.</p>
+                <div class="feature-grid">
+                  <div class="feature-card">
+                    <span class="feature-icon">🤖</span>
+                    <h3>Free Models</h3>
+                    <p>Access all OpenRouter free models</p>
+                  </div>
+                  <div class="feature-card">
+                    <span class="feature-icon">🎯</span>
+                    <h3>Find the Best</h3>
+                    <p>Discover which model suits your needs</p>
+                  </div>
+                  <div class="feature-card">
+                    <span class="feature-icon">⚡</span>
+                    <h3>Fast & Simple</h3>
+                    <p>Clean interface, no signup required</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

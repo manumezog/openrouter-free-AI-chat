@@ -7,7 +7,9 @@ const APP_STATE = {
   currentConversationId:
     localStorage.getItem("current_conversation_id") || null,
   availableModels: [],
-  selectedModel: localStorage.getItem("selected_model") || "",
+  // Dual model selection
+  selectedModelA: localStorage.getItem("selected_model_a") || "",
+  selectedModelB: localStorage.getItem("selected_model_b") || "",
   isLoading: false,
 };
 
@@ -20,8 +22,14 @@ const elements = {
   saveApiKeyBtn: document.getElementById("save-api-key-btn"),
   conversationsList: document.getElementById("conversations-list"),
   newConversationBtn: document.getElementById("new-conversation-btn"),
-  modelSelector: document.getElementById("model-selector"),
-  messagesContainer: document.getElementById("messages-container"),
+  // Dual model selectors
+  modelSelectorA: document.getElementById("model-selector-a"),
+  modelSelectorB: document.getElementById("model-selector-b"),
+  panelAModelName: document.getElementById("panel-a-model-name"),
+  panelBModelName: document.getElementById("panel-b-model-name"),
+  // Dual message containers
+  messagesContainerA: document.getElementById("messages-container-a"),
+  messagesContainerB: document.getElementById("messages-container-b"),
   messageInput: document.getElementById("message-input"),
   sendBtn: document.getElementById("send-btn"),
   settingsBtn: document.getElementById("settings-btn"),
@@ -80,7 +88,7 @@ const OpenRouterAPI = {
           Authorization: `Bearer ${APP_STATE.apiKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.href,
-          "X-Title": "OpenRouter Free AI Chat",
+          "X-Title": "OpenRouter Free AI Chat - Model Comparison",
         },
         body: JSON.stringify({
           model: model,
@@ -94,11 +102,28 @@ const OpenRouterAPI = {
       }
 
       const data = await response.json();
-      return data.choices[0].message.content;
+      // Return full response data for metrics
+      return {
+        content: data.choices[0].message.content,
+        usage: data.usage || {},
+        model: data.model || model,
+      };
     } catch (error) {
       console.error("Error sending message:", error);
       throw error;
     }
+  },
+  
+  // Get model pricing info
+  getModelPricing(modelId) {
+    const model = APP_STATE.availableModels.find(m => m.id === modelId);
+    if (model && model.pricing) {
+      return {
+        prompt: parseFloat(model.pricing.prompt) || 0,
+        completion: parseFloat(model.pricing.completion) || 0,
+      };
+    }
+    return { prompt: 0, completion: 0 };
   },
 };
 
@@ -109,9 +134,10 @@ const ConversationManager = {
   createConversation() {
     const newConversation = {
       id: Date.now().toString(),
-      title: "New Conversation",
-      messages: [],
-      model: APP_STATE.selectedModel,
+      title: "New Comparison",
+      messages: [], // Will contain messages with panel indicator
+      modelA: APP_STATE.selectedModelA,
+      modelB: APP_STATE.selectedModelB,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -128,13 +154,16 @@ const ConversationManager = {
     );
   },
 
-  addMessage(role, content) {
+  addMessage(role, content, panel = null, model = null, metrics = null) {
     const conversation = this.getCurrentConversation();
     if (!conversation) return;
 
     conversation.messages.push({
       role: role,
       content: content,
+      panel: panel, // 'A', 'B', or null for user messages
+      model: model,
+      metrics: metrics, // { timeElapsed, wordCount, tokenCount, cost }
       timestamp: new Date().toISOString(),
     });
 
@@ -144,7 +173,7 @@ const ConversationManager = {
       conversation.messages.filter((m) => m.role === "user").length === 1
     ) {
       conversation.title =
-        content.substring(0, 50) + (content.length > 50 ? "..." : "");
+        content.substring(0, 40) + (content.length > 40 ? "..." : "");
     }
 
     conversation.updatedAt = new Date().toISOString();
@@ -188,8 +217,8 @@ const UI = {
     if (APP_STATE.conversations.length === 0) {
       elements.conversationsList.innerHTML = `
                 <div style="text-align: center; color: var(--text-tertiary); padding: var(--spacing-lg);">
-                    <p>No conversations yet.</p>
-                    <p style="font-size: var(--font-size-sm); margin-top: var(--spacing-sm);">Click + to start chatting!</p>
+                    <p>No comparisons yet.</p>
+                    <p style="font-size: var(--font-size-sm); margin-top: var(--spacing-sm);">Select two models and start comparing!</p>
                 </div>
             `;
       return;
@@ -208,7 +237,7 @@ const UI = {
       conversationEl.innerHTML = `
                 <div class="conversation-title">${conversation.title}</div>
                 <div class="conversation-meta">
-                    <span>${conversation.messages.length} messages</span>
+                    <span>${conversation.messages.filter(m => m.role === 'user').length} prompts</span>
                     <span>${formattedDate}</span>
                 </div>
             `;
@@ -225,87 +254,219 @@ const UI = {
     const conversation = ConversationManager.getCurrentConversation();
 
     if (!conversation || conversation.messages.length === 0) {
-      elements.messagesContainer.innerHTML = `
-                <div class="welcome-screen">
-                    <h2>Welcome to OpenRouter Free AI Chat! 🚀</h2>
-                    <p>Select a model above and start chatting with free AI models.</p>
-                    <div class="feature-grid">
-                        <div class="feature-card">
-                            <span class="feature-icon">🤖</span>
-                            <h3>Multiple Models</h3>
-                            <p>Access all free models from OpenRouter</p>
-                        </div>
-                        <div class="feature-card">
-                            <span class="feature-icon">💾</span>
-                            <h3>Conversation History</h3>
-                            <p>All chats saved locally in your browser</p>
-                        </div>
-                        <div class="feature-card">
-                            <span class="feature-icon">⚡</span>
-                            <h3>Fast & Simple</h3>
-                            <p>Clean interface, no signup required</p>
-                        </div>
-                    </div>
-                </div>
-            `;
+      // Show welcome screens
+      this.showWelcomeScreens();
       return;
     }
 
-    elements.messagesContainer.innerHTML = "";
+    // Clear containers
+    elements.messagesContainerA.innerHTML = "";
+    elements.messagesContainerB.innerHTML = "";
 
+    // Separate messages by panel
     conversation.messages.forEach((message) => {
-      const messageEl = this.createMessageElement(message);
-      elements.messagesContainer.appendChild(messageEl);
+      if (message.role === "user") {
+        // User messages appear in both panels
+        const messageElA = this.createMessageElement(message, "A");
+        const messageElB = this.createMessageElement(message, "B");
+        elements.messagesContainerA.appendChild(messageElA);
+        elements.messagesContainerB.appendChild(messageElB);
+      } else if (message.panel === "A") {
+        const messageEl = this.createMessageElement(message, "A");
+        elements.messagesContainerA.appendChild(messageEl);
+      } else if (message.panel === "B") {
+        const messageEl = this.createMessageElement(message, "B");
+        elements.messagesContainerB.appendChild(messageEl);
+      }
     });
 
     this.scrollToBottom();
   },
 
-  createMessageElement(message) {
+  showWelcomeScreens() {
+    elements.messagesContainerA.innerHTML = `
+      <div class="welcome-screen">
+        <h2>Compare AI Models! 🔄</h2>
+        <p>Select two models above and start chatting to compare their responses side-by-side.</p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <span class="feature-icon">⚖️</span>
+            <h3>Side-by-Side</h3>
+            <p>Compare responses in real-time</p>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon">🚀</span>
+            <h3>Parallel Requests</h3>
+            <p>Both models respond simultaneously</p>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon">💾</span>
+            <h3>Save History</h3>
+            <p>All comparisons saved locally</p>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    elements.messagesContainerB.innerHTML = `
+      <div class="welcome-screen">
+        <h2>Ready to Compare! ⚡</h2>
+        <p>Type a message below to see how different AI models respond.</p>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <span class="feature-icon">🤖</span>
+            <h3>Free Models</h3>
+            <p>Access all OpenRouter free models</p>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon">🎯</span>
+            <h3>Find the Best</h3>
+            <p>Discover which model suits your needs</p>
+          </div>
+          <div class="feature-card">
+            <span class="feature-icon">⚡</span>
+            <h3>Fast & Simple</h3>
+            <p>Clean interface, no signup required</p>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  createMessageElement(message, panel) {
     const messageEl = document.createElement("div");
     messageEl.className = `message ${message.role}`;
 
     const avatar = message.role === "user" ? "👤" : "🤖";
+    
+    // Build metrics HTML if available
+    let metricsHtml = '';
+    if (message.role === 'assistant' && message.metrics) {
+      const m = message.metrics;
+      metricsHtml = `
+        <div class="message-metrics">
+          <span class="metric">⏱️ ${m.timeElapsed}s</span>
+          <span class="metric">📝 ${m.wordCount} words</span>
+          <span class="metric">🔤 ${m.tokenCount} tokens</span>
+          <span class="metric">💰 $${m.cost}</span>
+        </div>
+      `;
+    }
 
     messageEl.innerHTML = `
             <div class="message-avatar">${avatar}</div>
-            <div class="message-content">${this.formatMessageContent(
-              message.content
-            )}</div>
+            <div class="message-content">
+              ${this.formatMessageContent(message.content)}
+              ${metricsHtml}
+            </div>
         `;
 
     return messageEl;
   },
 
   formatMessageContent(content) {
-    // Basic markdown-like formatting
+    // Comprehensive markdown formatting
     let formatted = content;
 
-    // Code blocks
+    // Escape HTML to prevent XSS
+    formatted = formatted
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Code blocks with syntax highlighting hint
     formatted = formatted.replace(
       /```(\w+)?\n([\s\S]*?)```/g,
-      "<pre><code>$2</code></pre>"
+      '<pre class="code-block"><code class="language-$1">$2</code></pre>'
     );
 
-    // Inline code
-    formatted = formatted.replace(/`([^`]+)`/g, "<code>$1</code>");
+    // Inline code (must come after code blocks)
+    formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
 
-    // Bold
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    // Tables - detect and format markdown tables
+    formatted = formatted.replace(
+      /(?:^|\n)((?:\|[^\n]+\|\n)+)/g,
+      (match, tableContent) => {
+        const rows = tableContent.trim().split('\n');
+        let tableHtml = '<table class="md-table">';
+        
+        rows.forEach((row, index) => {
+          // Skip separator row (|---|---|)
+          if (row.match(/^\|[\s\-:]+\|$/)) return;
+          
+          const cells = row.split('|').filter(cell => cell.trim() !== '');
+          const tag = index === 0 ? 'th' : 'td';
+          const rowTag = index === 0 ? 'thead' : (index === 1 ? 'tbody' : '');
+          
+          if (index === 0) tableHtml += '<thead>';
+          if (index === 1) tableHtml += '</thead><tbody>';
+          
+          tableHtml += '<tr>';
+          cells.forEach(cell => {
+            tableHtml += `<${tag}>${cell.trim()}</${tag}>`;
+          });
+          tableHtml += '</tr>';
+        });
+        
+        tableHtml += '</tbody></table>';
+        return tableHtml;
+      }
+    );
 
-    // Italic
-    formatted = formatted.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    // Headers (h1-h6) - must be at start of line
+    formatted = formatted.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
+    formatted = formatted.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
+    formatted = formatted.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    formatted = formatted.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    formatted = formatted.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    formatted = formatted.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
-    // Line breaks
-    formatted = formatted.replace(/\n/g, "<br>");
+    // Horizontal rule
+    formatted = formatted.replace(/^---+$/gm, '<hr>');
+
+    // Blockquotes
+    formatted = formatted.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // Unordered lists
+    formatted = formatted.replace(/^[\*\-] (.+)$/gm, '<li class="ul-item">$1</li>');
+    formatted = formatted.replace(/((?:<li class="ul-item">.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+    // Ordered lists
+    formatted = formatted.replace(/^\d+\. (.+)$/gm, '<li class="ol-item">$1</li>');
+    formatted = formatted.replace(/((?:<li class="ol-item">.*<\/li>\n?)+)/g, '<ol>$1</ol>');
+
+    // Links [text](url)
+    formatted = formatted.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>'
+    );
+
+    // Bold **text** or __text__
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic *text* or _text_
+    formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    formatted = formatted.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+    // Strikethrough ~~text~~
+    formatted = formatted.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+    // Line breaks (but not inside pre/code blocks)
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Clean up extra <br> after block elements
+    formatted = formatted.replace(/<\/(h[1-6]|p|ul|ol|li|blockquote|table|pre|hr)><br>/g, '</$1>');
+    formatted = formatted.replace(/<(hr)><br>/g, '<$1>');
 
     return formatted;
   },
 
-  addTypingIndicator() {
+  addTypingIndicator(panel) {
+    const container = panel === "A" ? elements.messagesContainerA : elements.messagesContainerB;
     const typingEl = document.createElement("div");
     typingEl.className = "message assistant";
-    typingEl.id = "typing-indicator";
+    typingEl.id = `typing-indicator-${panel}`;
     typingEl.innerHTML = `
             <div class="message-avatar">🤖</div>
             <div class="message-content">
@@ -317,62 +478,86 @@ const UI = {
             </div>
         `;
 
-    elements.messagesContainer.appendChild(typingEl);
+    container.appendChild(typingEl);
     this.scrollToBottom();
   },
 
-  removeTypingIndicator() {
-    const typingEl = document.getElementById("typing-indicator");
+  removeTypingIndicator(panel) {
+    const typingEl = document.getElementById(`typing-indicator-${panel}`);
     if (typingEl) {
       typingEl.remove();
     }
   },
 
   scrollToBottom() {
-    elements.messagesContainer.scrollTop =
-      elements.messagesContainer.scrollHeight;
+    elements.messagesContainerA.scrollTop = elements.messagesContainerA.scrollHeight;
+    elements.messagesContainerB.scrollTop = elements.messagesContainerB.scrollHeight;
   },
 
   async loadModels() {
     try {
-      elements.modelSelector.innerHTML =
-        '<option value="">Loading models...</option>';
+      elements.modelSelectorA.innerHTML = '<option value="">Loading models...</option>';
+      elements.modelSelectorB.innerHTML = '<option value="">Loading models...</option>';
 
       const models = await OpenRouterAPI.fetchFreeModels();
       APP_STATE.availableModels = models;
 
-      elements.modelSelector.innerHTML = "";
+      elements.modelSelectorA.innerHTML = "";
+      elements.modelSelectorB.innerHTML = "";
 
       if (models.length === 0) {
-        elements.modelSelector.innerHTML =
-          '<option value="">No free models available</option>';
+        elements.modelSelectorA.innerHTML = '<option value="">No free models available</option>';
+        elements.modelSelectorB.innerHTML = '<option value="">No free models available</option>';
         return;
       }
 
       models.forEach((model) => {
-        const option = document.createElement("option");
-        option.value = model.id;
-        option.textContent = `${model.name || model.id}`;
-        elements.modelSelector.appendChild(option);
+        const optionA = document.createElement("option");
+        optionA.value = model.id;
+        optionA.textContent = `${model.name || model.id}`;
+        elements.modelSelectorA.appendChild(optionA);
+        
+        const optionB = document.createElement("option");
+        optionB.value = model.id;
+        optionB.textContent = `${model.name || model.id}`;
+        elements.modelSelectorB.appendChild(optionB);
       });
 
-      // Select previously selected model or first model
-      if (
-        APP_STATE.selectedModel &&
-        models.find((m) => m.id === APP_STATE.selectedModel)
-      ) {
-        elements.modelSelector.value = APP_STATE.selectedModel;
+      // Select previously selected models or default to first two different models
+      if (APP_STATE.selectedModelA && models.find((m) => m.id === APP_STATE.selectedModelA)) {
+        elements.modelSelectorA.value = APP_STATE.selectedModelA;
       } else {
-        elements.modelSelector.value = models[0].id;
-        APP_STATE.selectedModel = models[0].id;
-        localStorage.setItem("selected_model", APP_STATE.selectedModel);
+        elements.modelSelectorA.value = models[0].id;
+        APP_STATE.selectedModelA = models[0].id;
+        localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
       }
+      
+      if (APP_STATE.selectedModelB && models.find((m) => m.id === APP_STATE.selectedModelB)) {
+        elements.modelSelectorB.value = APP_STATE.selectedModelB;
+      } else {
+        // Select second model if available, otherwise first
+        const secondModelIndex = models.length > 1 ? 1 : 0;
+        elements.modelSelectorB.value = models[secondModelIndex].id;
+        APP_STATE.selectedModelB = models[secondModelIndex].id;
+        localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
+      }
+      
+      // Update panel labels
+      this.updatePanelLabels();
     } catch (error) {
       console.error("Error loading models:", error);
-      elements.modelSelector.innerHTML =
-        '<option value="">Error loading models</option>';
+      elements.modelSelectorA.innerHTML = '<option value="">Error loading models</option>';
+      elements.modelSelectorB.innerHTML = '<option value="">Error loading models</option>';
       this.showError("Failed to load models. Please check your API key.");
     }
+  },
+  
+  updatePanelLabels() {
+    const modelA = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelA);
+    const modelB = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelB);
+    
+    elements.panelAModelName.textContent = modelA ? (modelA.name || modelA.id) : "Select a model";
+    elements.panelBModelName.textContent = modelB ? (modelB.name || modelB.id) : "Select a model";
   },
 
   showError(message) {
@@ -388,6 +573,7 @@ const UI = {
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             z-index: 10000;
             animation: slideIn 0.3s ease;
+            max-width: 400px;
         `;
     errorEl.textContent = message;
 
@@ -397,6 +583,31 @@ const UI = {
       errorEl.style.animation = "slideOut 0.3s ease";
       setTimeout(() => errorEl.remove(), 300);
     }, 4000);
+  },
+  
+  showSuccess(message) {
+    const successEl = document.createElement("div");
+    successEl.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        `;
+    successEl.textContent = message;
+
+    document.body.appendChild(successEl);
+
+    setTimeout(() => {
+      successEl.style.animation = "slideOut 0.3s ease";
+      setTimeout(() => successEl.remove(), 300);
+    }, 3000);
   },
 };
 
@@ -408,8 +619,8 @@ async function handleSendMessage() {
 
   if (!messageText || APP_STATE.isLoading) return;
 
-  if (!APP_STATE.selectedModel) {
-    UI.showError("Please select a model first");
+  if (!APP_STATE.selectedModelA || !APP_STATE.selectedModelB) {
+    UI.showError("Please select both Model A and Model B");
     return;
   }
 
@@ -419,41 +630,106 @@ async function handleSendMessage() {
     UI.renderConversations();
   }
 
-  // Add user message
+  // Add user message (appears in both panels)
   ConversationManager.addMessage("user", messageText);
   elements.messageInput.value = "";
   elements.messageInput.style.height = "auto";
   UI.renderMessages();
 
-  // Show typing indicator
-  UI.addTypingIndicator();
+  // Show typing indicators in both panels
+  UI.addTypingIndicator("A");
+  UI.addTypingIndicator("B");
   APP_STATE.isLoading = true;
   elements.sendBtn.disabled = true;
 
-  try {
-    const conversation = ConversationManager.getCurrentConversation();
-    const messages = conversation.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    const response = await OpenRouterAPI.sendMessage(
-      messages,
-      APP_STATE.selectedModel
-    );
-
-    UI.removeTypingIndicator();
-    ConversationManager.addMessage("assistant", response);
-    UI.renderMessages();
-    UI.renderConversations();
-  } catch (error) {
-    UI.removeTypingIndicator();
-    UI.showError(error.message || "Failed to get response from AI");
-    console.error("Error:", error);
-  } finally {
-    APP_STATE.isLoading = false;
-    elements.sendBtn.disabled = false;
+  // Get conversation messages for context (only user and assistant messages)
+  const conversation = ConversationManager.getCurrentConversation();
+  const messagesForAPI = conversation.messages
+    .filter(m => m.role === "user" || (m.role === "assistant"))
+    .reduce((acc, m) => {
+      if (m.role === "user") {
+        // Add user message once
+        if (!acc.find(msg => msg.content === m.content && msg.role === "user")) {
+          acc.push({ role: "user", content: m.content });
+        }
+      }
+      return acc;
+    }, []);
+  
+  // Add the current user message
+  const currentMessages = [...messagesForAPI];
+  if (!currentMessages.find(m => m.content === messageText)) {
+    currentMessages.push({ role: "user", content: messageText });
   }
+
+  // Send to both models in parallel with timing
+  const startTimeA = performance.now();
+  const startTimeB = performance.now();
+  
+  const [responseA, responseB] = await Promise.allSettled([
+    OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelA).then(result => {
+      result.timeElapsed = ((performance.now() - startTimeA) / 1000).toFixed(2);
+      return result;
+    }),
+    OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelB).then(result => {
+      result.timeElapsed = ((performance.now() - startTimeB) / 1000).toFixed(2);
+      return result;
+    }),
+  ]);
+
+  // Helper to calculate metrics
+  function calculateMetrics(response, modelId) {
+    const content = response.content;
+    const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length;
+    // Estimate tokens: ~4 chars per token for English, or use API response if available
+    const tokenCount = response.usage?.completion_tokens || Math.ceil(content.length / 4);
+    const promptTokens = response.usage?.prompt_tokens || Math.ceil(messageText.length / 4);
+    
+    // Get pricing (per token, multiply by 1M since OpenRouter shows per million tokens)
+    const pricing = OpenRouterAPI.getModelPricing(modelId);
+    const cost = ((promptTokens * pricing.prompt) + (tokenCount * pricing.completion)).toFixed(6);
+    
+    return {
+      timeElapsed: response.timeElapsed,
+      wordCount: wordCount,
+      tokenCount: tokenCount,
+      cost: cost,
+    };
+  }
+
+  // Handle Model A response
+  UI.removeTypingIndicator("A");
+  if (responseA.status === "fulfilled") {
+    const metrics = calculateMetrics(responseA.value, APP_STATE.selectedModelA);
+    ConversationManager.addMessage("assistant", responseA.value.content, "A", APP_STATE.selectedModelA, metrics);
+  } else {
+    ConversationManager.addMessage(
+      "assistant",
+      `❌ Error: ${responseA.reason?.message || "Failed to get response"}`,
+      "A",
+      APP_STATE.selectedModelA
+    );
+  }
+
+  // Handle Model B response
+  UI.removeTypingIndicator("B");
+  if (responseB.status === "fulfilled") {
+    const metrics = calculateMetrics(responseB.value, APP_STATE.selectedModelB);
+    ConversationManager.addMessage("assistant", responseB.value.content, "B", APP_STATE.selectedModelB, metrics);
+  } else {
+    ConversationManager.addMessage(
+      "assistant",
+      `❌ Error: ${responseB.reason?.message || "Failed to get response"}`,
+      "B",
+      APP_STATE.selectedModelB
+    );
+  }
+
+  UI.renderMessages();
+  UI.renderConversations();
+
+  APP_STATE.isLoading = false;
+  elements.sendBtn.disabled = false;
 }
 
 function handleNewConversation() {
@@ -462,9 +738,16 @@ function handleNewConversation() {
   UI.renderMessages();
 }
 
-function handleModelChange(event) {
-  APP_STATE.selectedModel = event.target.value;
-  localStorage.setItem("selected_model", APP_STATE.selectedModel);
+function handleModelChangeA(event) {
+  APP_STATE.selectedModelA = event.target.value;
+  localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
+  UI.updatePanelLabels();
+}
+
+function handleModelChangeB(event) {
+  APP_STATE.selectedModelB = event.target.value;
+  localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
+  UI.updatePanelLabels();
 }
 
 function handleSaveApiKey() {
@@ -507,7 +790,8 @@ function handleKeyPress(event) {
 elements.saveApiKeyBtn.addEventListener("click", handleSaveApiKey);
 elements.newConversationBtn.addEventListener("click", handleNewConversation);
 elements.sendBtn.addEventListener("click", handleSendMessage);
-elements.modelSelector.addEventListener("change", handleModelChange);
+elements.modelSelectorA.addEventListener("change", handleModelChangeA);
+elements.modelSelectorB.addEventListener("change", handleModelChangeB);
 elements.settingsBtn.addEventListener("click", handleSettings);
 elements.messageInput.addEventListener("input", handleTextareaInput);
 elements.messageInput.addEventListener("keypress", handleKeyPress);

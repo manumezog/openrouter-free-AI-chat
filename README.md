@@ -1,9 +1,9 @@
-# OpenRouter Free AI Chat 🚀
+# OpenRouter AI Model Comparator ⚖️
 
-A versatile, open-source project for chatting with **free AI models** through the [OpenRouter API](https://openrouter.ai/). Available as both a **modern web interface** and a **Python CLI tool**.
+Compare responses from **two AI models side-by-side** using free models from [OpenRouter](https://openrouter.ai/). See how different LLMs respond to the same prompts in real-time!
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-openrouter--free--ai--chat.web.app-blueviolet)](https://openrouter-free-ai-chat.web.app)
-![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 ![Firebase](https://img.shields.io/badge/Firebase-Hosting-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -11,22 +11,41 @@ A versatile, open-source project for chatting with **free AI models** through th
 
 ## ✨ Features
 
-### 🌐 Web Interface
+### ⚖️ Side-by-Side Comparison
 
-- 🤖 **Multi-Model Support** — Access all free models from OpenRouter
-- 💬 **Real-time Chat** — Instant messaging with AI models
-- 💾 **Conversation History** — All conversations saved locally in your browser
-- 🎨 **Premium Dark Mode** — Modern design with glassmorphism effects
-- ⚡ **Fast & Lightweight** — Pure HTML, CSS, JavaScript (no frameworks)
-- 📱 **Fully Responsive** — Works on desktop and mobile
-- 🔒 **Privacy-First** — API key and data stored only in your browser
+- **Dual Model Selection** — Choose two different AI models to compare
+- **Split-Screen Interface** — See both responses simultaneously
+- **Parallel API Calls** — Both models respond at the same time
+- **Color-Coded Panels** — Green for Model A, Orange for Model B
 
-### 🐍 Python CLI
+### 📊 Response Metrics
 
-- 🎯 **Interactive Mode** — Ask questions in real-time from terminal
-- 📝 **Automatic Logging** — All conversations saved to `conversation_log.jsonl`
-- 🔄 **Model Switching** — Easily switch between 6+ free models
-- 📊 **JSON Lines Format** — Easy to parse and analyze conversations
+Each AI response displays:
+
+| Metric        | Description                             |
+| ------------- | --------------------------------------- |
+| ⏱️ **Time**   | Response time in seconds                |
+| 📝 **Words**  | Word count of the response              |
+| 🔤 **Tokens** | Token count (from API or estimated)     |
+| 💰 **Cost**   | Estimated cost (free models show $0.00) |
+
+### 🎨 Rich Markdown Rendering
+
+AI responses are beautifully formatted with support for:
+
+- **Headers** (H1-H6) with proper styling
+- **Tables** with borders and alternating rows
+- **Code blocks** with syntax highlighting
+- **Lists** (ordered and unordered)
+- **Blockquotes** with accent styling
+- **Links**, **bold**, _italic_, and ~~strikethrough~~
+
+### 💾 Additional Features
+
+- **Conversation History** — All comparisons saved locally
+- **Premium Dark Mode** — Modern glassmorphism design
+- **Fully Responsive** — Works on desktop and mobile
+- **Privacy-First** — Everything stored in your browser
 
 ---
 
@@ -37,42 +56,22 @@ A versatile, open-source project for chatting with **free AI models** through th
 👉 **[https://openrouter-free-ai-chat.web.app](https://openrouter-free-ai-chat.web.app)**
 
 1. Visit the link above
-2. Enter your OpenRouter API key when prompted
-3. Select a model and start chatting!
+2. Enter your OpenRouter API key
+3. Select two models to compare
+4. Type a prompt and see both responses!
 
 ### Option 2: Run Locally
 
-#### Web Interface
-
 ```bash
 # Clone the repository
 git clone https://github.com/manumezog/openrouter-free-AI-chat.git
 cd openrouter-free-AI-chat
 
-# Open directly in browser
-# Just open public/index.html
-
-# Or use a local server
+# Start a local server
 cd public
 python -m http.server 8000
-# Then visit http://localhost:8000
-```
 
-#### Python CLI
-
-```bash
-# Clone the repository
-git clone https://github.com/manumezog/openrouter-free-AI-chat.git
-cd openrouter-free-AI-chat
-
-# Install dependencies
-pip install requests python-dotenv
-
-# Configure API key
-echo "OPENROUTER_API_KEY=your_api_key_here" > .env
-
-# Run the CLI
-python openRouterFreeAIchat.py
+# Visit http://localhost:8000
 ```
 
 ---
@@ -83,7 +82,7 @@ python openRouterFreeAIchat.py
 2. Sign up for a **free** account
 3. Go to **Settings → Keys**
 4. Generate and copy your API key
-5. Use it in the web app or `.env` file
+5. Paste it in the app when prompted
 
 ---
 
@@ -91,16 +90,15 @@ python openRouterFreeAIchat.py
 
 All models are **100% free** on OpenRouter:
 
-| Model                    | Provider   | Notes             |
-| ------------------------ | ---------- | ----------------- |
-| **DeepSeek R1 Turbo** ⭐ | DeepSeek   | Recommended, fast |
-| Gemini 2.0 Flash         | Google     | Experimental      |
-| Llama 2 70B              | Meta       | Large model       |
-| Mistral 7B               | Mistral AI | Balanced          |
-| Neural Chat 7B           | Intel      | Good quality      |
-| Qwen 7B Chat             | Alibaba    | Multilingual      |
+| Model            | Provider   | Context |
+| ---------------- | ---------- | ------- |
+| DeepSeek R1      | DeepSeek   | 64K     |
+| Llama 3.3 70B    | Meta       | 131K    |
+| Gemini 2.0 Flash | Google     | 1M      |
+| Mistral 7B       | Mistral AI | 32K     |
+| Qwen 2.5 72B     | Alibaba    | 131K    |
 
-> **Note**: Free model availability may change. The app automatically fetches all currently available free models.
+> **Note**: Free model availability changes. The app automatically fetches all currently available free models.
 
 ---
 
@@ -108,200 +106,90 @@ All models are **100% free** on OpenRouter:
 
 ```
 openrouter-free-AI-chat/
-├── public/                    # Web Interface
-│   ├── index.html            # Main HTML structure
-│   ├── styles.css            # Premium dark theme styling
-│   └── app.js                # Application logic & API integration
-├── openRouterFreeAIchat.py   # Python CLI tool
-├── requirements.txt          # Python dependencies
-├── firebase.json             # Firebase Hosting config
-├── .firebaserc               # Firebase project config
-├── .env                      # API key (create this)
-└── README.md                 # This file
+├── public/
+│   ├── index.html        # Split-screen comparison layout
+│   ├── styles.css        # Dark theme + markdown styling
+│   └── app.js            # Dual model logic & API integration
+├── openRouterFreeAIchat.py  # Python CLI (single model)
+├── firebase.json         # Firebase Hosting config
+└── README.md
 ```
 
 ---
 
-## 🎨 Web Interface Features
+## 🎯 Use Cases
 
-### Design Highlights
-
-- **Dark Mode** — Modern, eye-friendly dark theme
-- **Glassmorphism** — Beautiful frosted glass effects
-- **Smooth Animations** — Micro-interactions for enhanced UX
-- **Custom Scrollbars** — Styled to match the theme
-- **Responsive Layout** — Adapts to any screen size
-
-### Usage
-
-1. **API Key Setup** — Enter your key when first prompted (click ⚙️ to change later)
-2. **Select Model** — Choose from the dropdown menu
-3. **Chat** — Type and press Enter (Shift+Enter for new lines)
-4. **Conversations** — Click **+** for new, click sidebar items to switch
-
-### Configuration
-
-```javascript
-// Clear all data (run in browser console)
-localStorage.clear();
-
-// Or clear specific items
-localStorage.removeItem("openrouter_api_key");
-localStorage.removeItem("conversations");
-```
+- **Model Evaluation** — Find the best model for your needs
+- **Output Quality** — Compare response quality and style
+- **Speed Testing** — See which models respond faster
+- **Cost Analysis** — Understand token usage patterns
+- **Research** — Study how different LLMs approach problems
 
 ---
 
-## 🐍 Python CLI Features
+## 🐍 Python CLI (Single Model)
 
-### Running the CLI
+A simpler CLI tool is also included for terminal-based chats:
 
 ```bash
+pip install requests python-dotenv
+echo "OPENROUTER_API_KEY=your_key" > .env
 python openRouterFreeAIchat.py
 ```
 
-### Example Session
-
-```
-# AVAILABLE FREE MODELS
-1. DeepSeek R1 Turbo (Recommended)
-2. Llama 2 70B
-3. Mistral 7B
-...
-
-Select a model (1-6): 1
-✓ Selected: DeepSeek R1 Turbo
-
-================================================================================
-Enter your question (or 'quit' to exit): What is machine learning?
-
-Sending request...
-
-────────────────────────────────────────────────────────────────────────────────
-ANSWER:
-────────────────────────────────────────────────────────────────────────────────
-Machine learning is a subset of artificial intelligence that enables computer
-systems to learn and improve from experience without being explicitly programmed...
-────────────────────────────────────────────────────────────────────────────────
-✓ Saved to conversation_log.jsonl
-```
-
-### Conversation Logs
-
-All CLI conversations are saved to `conversation_log.jsonl`:
-
-```json
-{
-  "timestamp": "2024-12-04T10:30:45.123456",
-  "model_id": "tngtech/deepseek-r1t2-chimera:free",
-  "model_name": "DeepSeek R1 Turbo (Recommended)",
-  "question": "What is machine learning?",
-  "status_code": 200,
-  "response": "Machine learning is a subset of artificial intelligence..."
-}
-```
-
-**Analyze logs:**
-
-```bash
-# View all questions
-cat conversation_log.jsonl | jq '.question'
-
-# Filter by model
-cat conversation_log.jsonl | jq 'select(.model_name | contains("DeepSeek"))'
-
-# Count conversations
-cat conversation_log.jsonl | wc -l
-```
-
 ---
 
-## 🚀 Firebase Deployment
-
-Deploy your own instance:
+## 🚀 Deploy Your Own
 
 ```bash
-# Install Firebase CLI
 npm install -g firebase-tools
-
-# Login
 firebase login
-
-# Initialize (first time only)
 firebase init hosting
-# Select: public directory, configure as SPA: Yes
-
-# Deploy
 firebase deploy --only hosting
 ```
-
-Your app will be available at: `https://your-project-id.web.app`
-
----
-
-## 🐛 Troubleshooting
-
-| Issue                       | Solution                                              |
-| --------------------------- | ----------------------------------------------------- |
-| **ModuleNotFoundError**     | `pip install requests python-dotenv`                  |
-| **API Key not found**       | Create `.env` file with `OPENROUTER_API_KEY=your_key` |
-| **Error 401: Unauthorized** | Check/regenerate API key at openrouter.ai             |
-| **Error 429: Rate Limited** | Wait a moment, free models have rate limits           |
-| **Provider returned error** | Try a different model, check model availability       |
-| **No response**             | Check internet, try different model                   |
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Component        | Technology                     |
-| ---------------- | ------------------------------ |
-| **Web Frontend** | HTML5, CSS3, JavaScript (ES6+) |
-| **CLI**          | Python 3.7+                    |
-| **API**          | OpenRouter API                 |
-| **Hosting**      | Firebase Hosting               |
-| **Storage**      | localStorage / JSONL files     |
-| **Fonts**        | Google Fonts (Inter)           |
+| Component | Technology                     |
+| --------- | ------------------------------ |
+| Frontend  | HTML5, CSS3, JavaScript (ES6+) |
+| API       | OpenRouter API                 |
+| Hosting   | Firebase Hosting               |
+| Storage   | localStorage                   |
+| Fonts     | Google Fonts (Inter)           |
 
 ---
 
-## ⚠️ Important Notes
+## ⚠️ Notes
 
-- **Free Models**: Always verify [OpenRouter pricing](https://openrouter.ai/docs#models) as availability changes
+- **Free Models**: Verify [OpenRouter pricing](https://openrouter.ai/docs#models) as availability changes
 - **Rate Limits**: Free models may have request limits
-- **Privacy**: Web app stores everything locally; clear browser data to reset
-- **API Key Security**: Never commit your `.env` file or expose your API key
+- **Privacy**: All data stored locally in your browser
+- **API Key**: Never commit or expose your API key
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! Feel free to:
+Contributions welcome!
 
 - 🐛 Report bugs
 - 💡 Suggest features
 - 🔧 Submit pull requests
-- 📖 Improve documentation
 
 ---
 
 ## 📝 License
 
-This project is open source under the [MIT License](LICENSE).
-
----
-
-## 🙏 Acknowledgments
-
-- [OpenRouter](https://openrouter.ai/) — Access to free AI models
-- [Firebase](https://firebase.google.com/) — Hosting infrastructure
-- [Google Fonts](https://fonts.google.com/) — Inter font family
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for the AI community**
+**Compare AI Models Instantly ⚖️**
 
 [Live Demo](https://openrouter-free-ai-chat.web.app) • [Report Bug](https://github.com/manumezog/openrouter-free-AI-chat/issues) • [Request Feature](https://github.com/manumezog/openrouter-free-AI-chat/issues)
 
