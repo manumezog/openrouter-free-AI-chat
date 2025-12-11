@@ -35,10 +35,13 @@ const elements = {
   // Single model selector
   singleModelSelector: document.getElementById("single-model-selector"),
   modelSelectorSingle: document.getElementById("model-selector-single"),
+  dropdownListSingle: document.getElementById("dropdown-list-single"),
   // Dual model selectors
   dualModelSelectors: document.getElementById("dual-model-selectors"),
   modelSelectorA: document.getElementById("model-selector-a"),
   modelSelectorB: document.getElementById("model-selector-b"),
+  dropdownListA: document.getElementById("dropdown-list-a"),
+  dropdownListB: document.getElementById("dropdown-list-b"),
   panelAModelName: document.getElementById("panel-a-model-name"),
   panelBModelName: document.getElementById("panel-b-model-name"),
   // Chat containers
@@ -100,8 +103,10 @@ const OpenRouterAPI = {
     });
   },
 
-  async sendMessage(messages, model) {
+  async sendMessage(messages, model, onChunk = null) {
     try {
+      const useStreaming = onChunk !== null;
+      
       const response = await fetch(`${this.baseURL}/chat/completions`, {
         method: "POST",
         headers: {
@@ -113,6 +118,7 @@ const OpenRouterAPI = {
         body: JSON.stringify({
           model: model,
           messages: messages,
+          stream: useStreaming,
         }),
       });
 
@@ -121,12 +127,56 @@ const OpenRouterAPI = {
         throw new Error(errorData.error?.message || "Failed to send message");
       }
 
-      const data = await response.json();
-      // Return full response data for metrics
+      // Non-streaming response
+      if (!useStreaming) {
+        const data = await response.json();
+        return {
+          content: data.choices[0].message.content,
+          usage: data.usage || {},
+          model: data.model || model,
+        };
+      }
+      
+      // Streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let usage = {};
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullContent += delta;
+                onChunk(delta, fullContent);
+              }
+              // Capture usage if present (usually in final chunk)
+              if (parsed.usage) {
+                usage = parsed.usage;
+              }
+            } catch (e) {
+              // Skip parsing errors for incomplete chunks
+            }
+          }
+        }
+      }
+      
       return {
-        content: data.choices[0].message.content,
-        usage: data.usage || {},
-        model: data.model || model,
+        content: fullContent,
+        usage: usage,
+        model: model,
       };
     } catch (error) {
       console.error("Error sending message:", error);
@@ -568,6 +618,50 @@ const UI = {
       typingEl.remove();
     }
   },
+  
+  // Streaming message helpers
+  addStreamingMessage(id, panel) {
+    let container;
+    if (panel === 'single') {
+      container = elements.messagesContainerSingle;
+    } else if (panel === 'A') {
+      container = elements.messagesContainerA;
+    } else {
+      container = elements.messagesContainerB;
+    }
+    if (!container) return;
+    
+    const messageEl = document.createElement("div");
+    messageEl.className = "message assistant streaming";
+    messageEl.id = id;
+    messageEl.innerHTML = `
+      <div class="message-avatar">🤖</div>
+      <div class="message-content">
+        <span class="streaming-content"></span><span class="streaming-cursor">▊</span>
+      </div>
+    `;
+    
+    container.appendChild(messageEl);
+    this.scrollToBottom();
+  },
+  
+  updateStreamingMessage(id, content) {
+    const msgEl = document.getElementById(id);
+    if (!msgEl) return;
+    
+    const contentEl = msgEl.querySelector('.streaming-content');
+    if (contentEl) {
+      contentEl.innerHTML = this.formatMessageContent(content);
+    }
+    this.scrollToBottom();
+  },
+  
+  removeStreamingMessage(id) {
+    const msgEl = document.getElementById(id);
+    if (msgEl) {
+      msgEl.remove();
+    }
+  },
 
   scrollToBottom() {
     if (APP_STATE.chatMode === 'single') {
@@ -622,61 +716,136 @@ const UI = {
     const models = OpenRouterAPI.filterModels(APP_STATE.allModels, APP_STATE.modelFilter);
     APP_STATE.availableModels = models;
     
-    // Populate all selectors
-    this.populateModelSelector(elements.modelSelectorSingle, models);
-    this.populateModelSelector(elements.modelSelectorA, models);
-    this.populateModelSelector(elements.modelSelectorB, models);
+    // Sort models alphabetically by name
+    const sortedModels = [...models].sort((a, b) => {
+      const nameA = (a.name || a.id).toLowerCase();
+      const nameB = (b.name || b.id).toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+    
+    // Store sorted models for filtering
+    APP_STATE.sortedModels = sortedModels;
+    
+    // Populate all dropdown lists
+    this.populateDropdownList(elements.dropdownListSingle, sortedModels, 'single');
+    this.populateDropdownList(elements.dropdownListA, sortedModels, 'A');
+    this.populateDropdownList(elements.dropdownListB, sortedModels, 'B');
     
     if (models.length === 0) {
       const filterLabels = { free: 'free', paid: 'paid', all: '' };
       const msg = `No ${filterLabels[APP_STATE.modelFilter]} models available`;
-      if (elements.modelSelectorSingle) elements.modelSelectorSingle.innerHTML = `<option value="">${msg}</option>`;
-      if (elements.modelSelectorA) elements.modelSelectorA.innerHTML = `<option value="">${msg}</option>`;
-      if (elements.modelSelectorB) elements.modelSelectorB.innerHTML = `<option value="">${msg}</option>`;
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.placeholder = msg;
+      if (elements.modelSelectorA) elements.modelSelectorA.placeholder = msg;
+      if (elements.modelSelectorB) elements.modelSelectorB.placeholder = msg;
       return;
     }
+    
+    // Helper to get model name by ID
+    const getModelName = (modelId) => {
+      const model = sortedModels.find(m => m.id === modelId);
+      return model ? (model.name || model.id) : modelId;
+    };
     
     // Restore selections or set defaults
     // Single mode
     if (APP_STATE.selectedModelSingle && models.find(m => m.id === APP_STATE.selectedModelSingle)) {
-      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = APP_STATE.selectedModelSingle;
-    } else {
-      APP_STATE.selectedModelSingle = models[0].id;
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = getModelName(APP_STATE.selectedModelSingle);
+    } else if (sortedModels.length > 0) {
+      APP_STATE.selectedModelSingle = sortedModels[0].id;
       localStorage.setItem("selected_model_single", APP_STATE.selectedModelSingle);
-      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = models[0].id;
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = getModelName(sortedModels[0].id);
     }
     
     // Compare mode - Model A
     if (APP_STATE.selectedModelA && models.find(m => m.id === APP_STATE.selectedModelA)) {
-      if (elements.modelSelectorA) elements.modelSelectorA.value = APP_STATE.selectedModelA;
-    } else {
-      APP_STATE.selectedModelA = models[0].id;
+      if (elements.modelSelectorA) elements.modelSelectorA.value = getModelName(APP_STATE.selectedModelA);
+    } else if (sortedModels.length > 0) {
+      APP_STATE.selectedModelA = sortedModels[0].id;
       localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
-      if (elements.modelSelectorA) elements.modelSelectorA.value = models[0].id;
+      if (elements.modelSelectorA) elements.modelSelectorA.value = getModelName(sortedModels[0].id);
     }
     
     // Compare mode - Model B
     if (APP_STATE.selectedModelB && models.find(m => m.id === APP_STATE.selectedModelB)) {
-      if (elements.modelSelectorB) elements.modelSelectorB.value = APP_STATE.selectedModelB;
-    } else {
-      const secondIdx = models.length > 1 ? 1 : 0;
-      APP_STATE.selectedModelB = models[secondIdx].id;
+      if (elements.modelSelectorB) elements.modelSelectorB.value = getModelName(APP_STATE.selectedModelB);
+    } else if (sortedModels.length > 0) {
+      const secondIdx = sortedModels.length > 1 ? 1 : 0;
+      APP_STATE.selectedModelB = sortedModels[secondIdx].id;
       localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
-      if (elements.modelSelectorB) elements.modelSelectorB.value = models[secondIdx].id;
+      if (elements.modelSelectorB) elements.modelSelectorB.value = getModelName(sortedModels[secondIdx].id);
     }
     
     this.updatePanelLabels();
   },
   
-  populateModelSelector(selector, models) {
-    if (!selector) return;
-    selector.innerHTML = '';
+  populateDropdownList(listEl, models, selectorType) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    
     models.forEach(model => {
-      const option = document.createElement('option');
-      option.value = model.id;
-      option.textContent = model.name || model.id;
-      selector.appendChild(option);
+      const item = document.createElement('div');
+      item.className = 'dropdown-item';
+      item.textContent = model.name || model.id;
+      item.dataset.modelId = model.id;
+      item.dataset.modelName = model.name || model.id;
+      
+      item.addEventListener('click', () => {
+        this.selectDropdownItem(selectorType, model.id, model.name || model.id);
+      });
+      
+      listEl.appendChild(item);
     });
+  },
+  
+  selectDropdownItem(selectorType, modelId, modelName) {
+    let input, listEl;
+    
+    if (selectorType === 'single') {
+      input = elements.modelSelectorSingle;
+      listEl = elements.dropdownListSingle;
+      APP_STATE.selectedModelSingle = modelId;
+      localStorage.setItem("selected_model_single", modelId);
+    } else if (selectorType === 'A') {
+      input = elements.modelSelectorA;
+      listEl = elements.dropdownListA;
+      APP_STATE.selectedModelA = modelId;
+      localStorage.setItem("selected_model_a", modelId);
+      this.updatePanelLabels();
+    } else {
+      input = elements.modelSelectorB;
+      listEl = elements.dropdownListB;
+      APP_STATE.selectedModelB = modelId;
+      localStorage.setItem("selected_model_b", modelId);
+      this.updatePanelLabels();
+    }
+    
+    if (input) input.value = modelName;
+    if (listEl) listEl.classList.remove('open');
+  },
+  
+  filterDropdownList(selectorType, searchTerm) {
+    let listEl;
+    if (selectorType === 'single') listEl = elements.dropdownListSingle;
+    else if (selectorType === 'A') listEl = elements.dropdownListA;
+    else listEl = elements.dropdownListB;
+    
+    if (!listEl) return;
+    
+    const items = listEl.querySelectorAll('.dropdown-item');
+    const term = searchTerm.toLowerCase();
+    
+    items.forEach(item => {
+      const name = item.dataset.modelName.toLowerCase();
+      item.style.display = name.includes(term) ? 'block' : 'none';
+    });
+  },
+  
+  // Helper to get model ID from input value (model name)
+  getModelIdFromName(modelName) {
+    const model = APP_STATE.availableModels.find(m => 
+      (m.name || m.id).toLowerCase() === modelName.toLowerCase()
+    );
+    return model ? model.id : null;
   },
   
   updateChatMode() {
@@ -841,19 +1010,30 @@ async function handleSendMessage() {
   }
 
   if (APP_STATE.chatMode === 'single') {
-    // Single mode - send to one model
-    UI.addTypingIndicator('single');
+    // Single mode - send to one model with streaming
+    UI.removeTypingIndicator('single');
+    
+    // Create streaming message element
+    const streamingMsgId = 'streaming-msg-single';
+    UI.addStreamingMessage(streamingMsgId, 'single');
     
     const startTime = performance.now();
     try {
-      const response = await OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelSingle);
+      const response = await OpenRouterAPI.sendMessage(
+        currentMessages, 
+        APP_STATE.selectedModelSingle,
+        (chunk, fullContent) => {
+          UI.updateStreamingMessage(streamingMsgId, fullContent);
+        }
+      );
       response.timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
       
-      UI.removeTypingIndicator('single');
+      // Replace streaming message with final message
+      UI.removeStreamingMessage(streamingMsgId);
       const metrics = calculateMetrics(response, APP_STATE.selectedModelSingle);
       ConversationManager.addMessage("assistant", response.content, "single", APP_STATE.selectedModelSingle, metrics);
     } catch (error) {
-      UI.removeTypingIndicator('single');
+      UI.removeStreamingMessage(streamingMsgId);
       ConversationManager.addMessage(
         "assistant",
         `❌ Error: ${error.message || "Failed to get response"}`,
@@ -862,27 +1042,42 @@ async function handleSendMessage() {
       );
     }
   } else {
-    // Compare mode - send to both models in parallel
-    UI.addTypingIndicator("A");
-    UI.addTypingIndicator("B");
+    // Compare mode - send to both models in parallel with streaming
+    UI.removeTypingIndicator("A");
+    UI.removeTypingIndicator("B");
+    
+    // Create streaming message elements
+    UI.addStreamingMessage('streaming-msg-a', 'A');
+    UI.addStreamingMessage('streaming-msg-b', 'B');
 
-    // Send to both models in parallel with timing
     const startTimeA = performance.now();
     const startTimeB = performance.now();
     
     const [responseA, responseB] = await Promise.allSettled([
-      OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelA).then(result => {
+      OpenRouterAPI.sendMessage(
+        currentMessages, 
+        APP_STATE.selectedModelA,
+        (chunk, fullContent) => {
+          UI.updateStreamingMessage('streaming-msg-a', fullContent);
+        }
+      ).then(result => {
         result.timeElapsed = ((performance.now() - startTimeA) / 1000).toFixed(2);
         return result;
       }),
-      OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelB).then(result => {
+      OpenRouterAPI.sendMessage(
+        currentMessages, 
+        APP_STATE.selectedModelB,
+        (chunk, fullContent) => {
+          UI.updateStreamingMessage('streaming-msg-b', fullContent);
+        }
+      ).then(result => {
         result.timeElapsed = ((performance.now() - startTimeB) / 1000).toFixed(2);
         return result;
       }),
     ]);
 
     // Handle Model A response
-    UI.removeTypingIndicator("A");
+    UI.removeStreamingMessage('streaming-msg-a');
     if (responseA.status === "fulfilled") {
       const metrics = calculateMetrics(responseA.value, APP_STATE.selectedModelA);
       ConversationManager.addMessage("assistant", responseA.value.content, "A", APP_STATE.selectedModelA, metrics);
@@ -896,7 +1091,7 @@ async function handleSendMessage() {
     }
 
     // Handle Model B response
-    UI.removeTypingIndicator("B");
+    UI.removeStreamingMessage('streaming-msg-b');
     if (responseB.status === "fulfilled") {
       const metrics = calculateMetrics(responseB.value, APP_STATE.selectedModelB);
       ConversationManager.addMessage("assistant", responseB.value.content, "B", APP_STATE.selectedModelB, metrics);
@@ -924,20 +1119,29 @@ function handleNewConversation() {
 }
 
 function handleModelChangeA(event) {
-  APP_STATE.selectedModelA = event.target.value;
-  localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
-  UI.updatePanelLabels();
+  const modelId = UI.getModelIdFromName(event.target.value);
+  if (modelId) {
+    APP_STATE.selectedModelA = modelId;
+    localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
+    UI.updatePanelLabels();
+  }
 }
 
 function handleModelChangeB(event) {
-  APP_STATE.selectedModelB = event.target.value;
-  localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
-  UI.updatePanelLabels();
+  const modelId = UI.getModelIdFromName(event.target.value);
+  if (modelId) {
+    APP_STATE.selectedModelB = modelId;
+    localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
+    UI.updatePanelLabels();
+  }
 }
 
 function handleModelChangeSingle(event) {
-  APP_STATE.selectedModelSingle = event.target.value;
-  localStorage.setItem("selected_model_single", APP_STATE.selectedModelSingle);
+  const modelId = UI.getModelIdFromName(event.target.value);
+  if (modelId) {
+    APP_STATE.selectedModelSingle = modelId;
+    localStorage.setItem("selected_model_single", APP_STATE.selectedModelSingle);
+  }
 }
 
 function handleChatModeChange(mode) {
@@ -1021,6 +1225,91 @@ if (elements.modelFilterToggle) {
     btn.addEventListener('click', () => handleModelFilterChange(btn.dataset.filter));
   });
 }
+
+// ===========================
+// Searchable Dropdown Event Handlers
+// ===========================
+function setupDropdown(inputEl, listEl, arrowBtn, selectorType) {
+  if (!inputEl || !listEl) return;
+  
+  let savedValue = '';
+  
+  // Arrow button toggles dropdown
+  if (arrowBtn) {
+    arrowBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = listEl.classList.contains('open');
+      closeAllDropdowns();
+      if (!isOpen) {
+        listEl.classList.add('open');
+        UI.filterDropdownList(selectorType, '');  // Show all items
+      }
+    });
+  }
+  
+  // Focus clears input and opens dropdown
+  inputEl.addEventListener('focus', () => {
+    savedValue = inputEl.value;
+    inputEl.value = '';
+    inputEl.placeholder = 'Type to search...';
+    listEl.classList.add('open');
+    UI.filterDropdownList(selectorType, '');  // Show all items
+  });
+  
+  // Blur restores value if nothing selected
+  inputEl.addEventListener('blur', (e) => {
+    // Delay to allow click on dropdown item to process
+    setTimeout(() => {
+      if (!listEl.classList.contains('open')) return;
+      // If input is empty or doesn't match a valid model, restore saved value
+      const modelId = UI.getModelIdFromName(inputEl.value);
+      if (!modelId) {
+        inputEl.value = savedValue;
+      }
+      inputEl.placeholder = 'Search models...';
+      listEl.classList.remove('open');
+    }, 200);
+  });
+  
+  // Typing filters the list
+  inputEl.addEventListener('input', () => {
+    UI.filterDropdownList(selectorType, inputEl.value);
+    listEl.classList.add('open');
+  });
+}
+
+function closeAllDropdowns() {
+  document.querySelectorAll('.dropdown-list').forEach(list => {
+    list.classList.remove('open');
+  });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.searchable-dropdown')) {
+    closeAllDropdowns();
+  }
+});
+
+// Setup each dropdown
+setupDropdown(
+  elements.modelSelectorSingle, 
+  elements.dropdownListSingle, 
+  document.querySelector('#dropdown-single .dropdown-arrow'),
+  'single'
+);
+setupDropdown(
+  elements.modelSelectorA, 
+  elements.dropdownListA, 
+  document.querySelector('#dropdown-a .dropdown-arrow'),
+  'A'
+);
+setupDropdown(
+  elements.modelSelectorB, 
+  elements.dropdownListB, 
+  document.querySelector('#dropdown-b .dropdown-arrow'),
+  'B'
+);
 
 // Allow Enter to save API key in modal
 elements.apiKeyInput.addEventListener("keypress", (event) => {

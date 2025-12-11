@@ -139,9 +139,11 @@
           <div class="single-model-selector" id="single-model-selector">
             <div class="model-selector-container">
               <label for="model-selector-single">🤖 Model:</label>
-              <select id="model-selector-single" class="model-select">
-                <option value="">Loading models...</option>
-              </select>
+              <div class="searchable-dropdown" id="dropdown-single">
+                <input type="text" id="model-selector-single" class="dropdown-input" placeholder="Search models..." autocomplete="off">
+                <button type="button" class="dropdown-arrow" aria-label="Open dropdown">▼</button>
+                <div class="dropdown-list" id="dropdown-list-single"></div>
+              </div>
             </div>
           </div>
           
@@ -149,16 +151,20 @@
           <div class="dual-model-selectors" id="dual-model-selectors" style="display: none;">
             <div class="model-selector-container model-a">
               <label for="model-selector-a">🅰️ Model A:</label>
-              <select id="model-selector-a" class="model-select">
-                <option value="">Loading models...</option>
-              </select>
+              <div class="searchable-dropdown" id="dropdown-a">
+                <input type="text" id="model-selector-a" class="dropdown-input" placeholder="Search models..." autocomplete="off">
+                <button type="button" class="dropdown-arrow" aria-label="Open dropdown">▼</button>
+                <div class="dropdown-list" id="dropdown-list-a"></div>
+              </div>
             </div>
             <div class="vs-divider">VS</div>
             <div class="model-selector-container model-b">
               <label for="model-selector-b">🅱️ Model B:</label>
-              <select id="model-selector-b" class="model-select">
-                <option value="">Loading models...</option>
-              </select>
+              <div class="searchable-dropdown" id="dropdown-b">
+                <input type="text" id="model-selector-b" class="dropdown-input" placeholder="Search models..." autocomplete="off">
+                <button type="button" class="dropdown-arrow" aria-label="Open dropdown">▼</button>
+                <div class="dropdown-list" id="dropdown-list-b"></div>
+              </div>
             </div>
           </div>
           

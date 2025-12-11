@@ -1,8 +1,8 @@
-# OpenRouter AI Model Comparator ⚖️
+# OpenRouter AI Chat ⚡
 
-Compare responses from **two AI models side-by-side** using free models from [OpenRouter](https://openrouter.ai/). See how different LLMs respond to the same prompts in real-time!
+A versatile AI chat application with **single chat** and **side-by-side model comparison** modes using [OpenRouter](https://openrouter.ai/). Choose between free and paid models, compare responses in real-time!
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-openrouter--free--ai--chat.web.app-blueviolet)](https://openrouter-free-ai-chat.web.app)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-ai--chat.mezapps.com-blueviolet)](https://openrouter-free-ai-chat.web.app)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 ![Firebase](https://img.shields.io/badge/Firebase-Hosting-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
@@ -10,6 +10,21 @@ Compare responses from **two AI models side-by-side** using free models from [Op
 ---
 
 ## ✨ Features
+
+### 🎛️ Flexible Chat Modes
+
+| Mode               | Description                                        |
+| ------------------ | -------------------------------------------------- |
+| 💬 **Single Chat** | Classic chat interface with one AI model           |
+| ⚖️ **Compare**     | Split-screen comparison of two models side-by-side |
+
+### 🔍 Model Filters
+
+| Filter      | Description                     |
+| ----------- | ------------------------------- |
+| 🆓 **Free** | Only show free models (default) |
+| 💎 **Paid** | Only show paid models           |
+| 📋 **All**  | Show all available models       |
 
 ### ⚖️ Side-by-Side Comparison
 
@@ -29,6 +44,19 @@ Each AI response displays:
 | 🔤 **Tokens** | Token count (from API or estimated)     |
 | 💰 **Cost**   | Estimated cost (free models show $0.00) |
 
+#### 💰 Cost Estimation Logic
+
+The cost is calculated using OpenRouter's per-token pricing:
+
+```
+Cost = (Prompt Tokens × Prompt Price) + (Completion Tokens × Completion Price)
+```
+
+- **Token counts**: Uses actual token counts from the API response when available
+- **Fallback estimation**: If not provided, estimates ~4 characters per token
+- **Pricing data**: Fetched from OpenRouter's model metadata (per-token rates)
+- **Free models**: Show $0.00 as their pricing is set to 0
+
 ### 🎨 Rich Markdown Rendering
 
 AI responses are beautifully formatted with support for:
@@ -42,10 +70,11 @@ AI responses are beautifully formatted with support for:
 
 ### 💾 Additional Features
 
-- **Conversation History** — All comparisons saved locally
+- **Conversation History** — All chats saved locally
 - **Premium Dark Mode** — Modern glassmorphism design
 - **Fully Responsive** — Works on desktop and mobile
 - **Privacy-First** — Everything stored in your browser
+- **Persistent Settings** — Mode and filter preferences remembered
 
 ---
 
@@ -57,8 +86,9 @@ AI responses are beautifully formatted with support for:
 
 1. Visit the link above
 2. Enter your OpenRouter API key
-3. Select two models to compare
-4. Type a prompt and see both responses!
+3. Choose Single or Compare mode
+4. Filter models by Free/Paid/All
+5. Start chatting!
 
 ### Option 2: Run Locally
 
@@ -86,9 +116,11 @@ python -m http.server 8000
 
 ---
 
-## 📋 Supported Free Models
+## 📋 Supported Models
 
-All models are **100% free** on OpenRouter:
+The app supports both **free** and **paid** OpenRouter models:
+
+### Free Models (Examples)
 
 | Model            | Provider   | Context |
 | ---------------- | ---------- | ------- |
@@ -96,9 +128,12 @@ All models are **100% free** on OpenRouter:
 | Llama 3.3 70B    | Meta       | 131K    |
 | Gemini 2.0 Flash | Google     | 1M      |
 | Mistral 7B       | Mistral AI | 32K     |
-| Qwen 2.5 72B     | Alibaba    | 131K    |
 
-> **Note**: Free model availability changes. The app automatically fetches all currently available free models.
+### Paid Models
+
+Access premium models like GPT-4, Claude, and more with usage-based pricing.
+
+> **Note**: Model availability changes. The app automatically fetches all currently available models.
 
 ---
 
@@ -107,9 +142,9 @@ All models are **100% free** on OpenRouter:
 ```
 openrouter-free-AI-chat/
 ├── public/
-│   ├── index.html        # Split-screen comparison layout
+│   ├── index.html        # Dual-mode chat layout
 │   ├── styles.css        # Dark theme + markdown styling
-│   └── app.js            # Dual model logic & API integration
+│   └── app.js            # Mode switching, filtering & API
 ├── openRouterFreeAIchat.py  # Python CLI (single model)
 ├── firebase.json         # Firebase Hosting config
 └── README.md
@@ -122,7 +157,7 @@ openrouter-free-AI-chat/
 - **Model Evaluation** — Find the best model for your needs
 - **Output Quality** — Compare response quality and style
 - **Speed Testing** — See which models respond faster
-- **Cost Analysis** — Understand token usage patterns
+- **Cost Analysis** — Compare free vs paid model performance
 - **Research** — Study how different LLMs approach problems
 
 ---
@@ -164,10 +199,10 @@ firebase deploy --only hosting
 
 ## ⚠️ Notes
 
-- **Free Models**: Verify [OpenRouter pricing](https://openrouter.ai/docs#models) as availability changes
-- **Rate Limits**: Free models may have request limits
-- **Privacy**: All data stored locally in your browser
-- **API Key**: Never commit or expose your API key
+- **API Key Security**: Your key is stored locally in your browser only
+- **Rate Limits**: Models may have request limits
+- **Privacy**: All data stored locally, never sent to our servers
+- **Pricing**: Check [OpenRouter pricing](https://openrouter.ai/docs#models) for paid model costs
 
 ---
 
@@ -189,7 +224,7 @@ MIT License - see [LICENSE](LICENSE)
 
 <div align="center">
 
-**Compare AI Models Instantly ⚖️**
+**AI Chat with Model Comparison ⚡**
 
 [Live Demo](https://openrouter-free-ai-chat.web.app) • [Report Bug](https://github.com/manumezog/openrouter-free-AI-chat/issues) • [Request Feature](https://github.com/manumezog/openrouter-free-AI-chat/issues)
 

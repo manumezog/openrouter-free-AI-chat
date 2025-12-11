@@ -234,6 +234,87 @@ a:hover {
   box-shadow: var(--shadow-sm);
 }
 
+/* Searchable Dropdown Component */
+.searchable-dropdown {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 250px;
+}
+
+.dropdown-input {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px 0 0 8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.dropdown-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.dropdown-arrow {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dropdown-arrow:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-top: 4px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: none;
+}
+
+.dropdown-list.open {
+  display: block;
+}
+
+.dropdown-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 /* Single Model Selector */
 .single-model-selector {
   display: flex;
@@ -242,7 +323,7 @@ a:hover {
   flex: 1;
 }
 
-.single-model-selector .model-select {
+.single-model-selector .searchable-dropdown {
   min-width: 300px;
 }
 
@@ -1411,4 +1492,25 @@ a:hover {
     height: auto;
     cursor: col-resize;
   }
+}
+
+/* Streaming message styles */
+.message.streaming .message-content {
+  min-height: 24px;
+}
+
+.streaming-cursor {
+  display: inline-block;
+  animation: blink 0.7s step-end infinite;
+  color: var(--accent-primary);
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-content {
+  display: inline;
 }
