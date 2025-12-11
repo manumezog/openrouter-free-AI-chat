@@ -6,7 +6,14 @@ const APP_STATE = {
   conversations: JSON.parse(localStorage.getItem("conversations") || "[]"),
   currentConversationId:
     localStorage.getItem("current_conversation_id") || null,
-  availableModels: [],
+  allModels: [], // All fetched models
+  availableModels: [], // Filtered models based on current filter
+  // Chat mode: 'single' or 'compare'
+  chatMode: localStorage.getItem("chat_mode") || "single",
+  // Model filter: 'free', 'paid', or 'all'
+  modelFilter: localStorage.getItem("model_filter") || "free",
+  // Single model selection
+  selectedModelSingle: localStorage.getItem("selected_model_single") || "",
   // Dual model selection
   selectedModelA: localStorage.getItem("selected_model_a") || "",
   selectedModelB: localStorage.getItem("selected_model_b") || "",
@@ -22,12 +29,23 @@ const elements = {
   saveApiKeyBtn: document.getElementById("save-api-key-btn"),
   conversationsList: document.getElementById("conversations-list"),
   newConversationBtn: document.getElementById("new-conversation-btn"),
+  // Toggle controls
+  chatModeToggle: document.getElementById("chat-mode-toggle"),
+  modelFilterToggle: document.getElementById("model-filter-toggle"),
+  // Single model selector
+  singleModelSelector: document.getElementById("single-model-selector"),
+  modelSelectorSingle: document.getElementById("model-selector-single"),
   // Dual model selectors
+  dualModelSelectors: document.getElementById("dual-model-selectors"),
   modelSelectorA: document.getElementById("model-selector-a"),
   modelSelectorB: document.getElementById("model-selector-b"),
   panelAModelName: document.getElementById("panel-a-model-name"),
   panelBModelName: document.getElementById("panel-b-model-name"),
-  // Dual message containers
+  // Chat containers
+  singleChatContainer: document.getElementById("single-chat-container"),
+  comparisonContainer: document.getElementById("comparison-container"),
+  // Message containers
+  messagesContainerSingle: document.getElementById("messages-container-single"),
   messagesContainerA: document.getElementById("messages-container-a"),
   messagesContainerB: document.getElementById("messages-container-b"),
   messageInput: document.getElementById("message-input"),
@@ -46,7 +64,7 @@ const elements = {
 const OpenRouterAPI = {
   baseURL: "https://openrouter.ai/api/v1",
 
-  async fetchFreeModels() {
+  async fetchAllModels() {
     try {
       const response = await fetch(`${this.baseURL}/models`, {
         headers: {
@@ -59,25 +77,27 @@ const OpenRouterAPI = {
       }
 
       const data = await response.json();
-      // Filter for free models (pricing.prompt === "0" and pricing.completion === "0")
-      const freeModels = data.data.filter((model) => {
-        const pricing = model.pricing;
-        return (
-          pricing &&
-          (pricing.prompt === "0" ||
-            pricing.prompt === 0 ||
-            parseFloat(pricing.prompt) === 0) &&
-          (pricing.completion === "0" ||
-            pricing.completion === 0 ||
-            parseFloat(pricing.completion) === 0)
-        );
-      });
-
-      return freeModels;
+      return data.data || [];
     } catch (error) {
       console.error("Error fetching models:", error);
       throw error;
     }
+  },
+  
+  // Filter models based on free/paid/all selection
+  filterModels(allModels, filter) {
+    if (filter === 'all') {
+      return allModels;
+    }
+    
+    return allModels.filter((model) => {
+      const pricing = model.pricing;
+      const isFree = pricing &&
+        (pricing.prompt === "0" || pricing.prompt === 0 || parseFloat(pricing.prompt) === 0) &&
+        (pricing.completion === "0" || pricing.completion === 0 || parseFloat(pricing.completion) === 0);
+      
+      return filter === 'free' ? isFree : !isFree;
+    });
   },
 
   async sendMessage(messages, model) {
@@ -87,8 +107,8 @@ const OpenRouterAPI = {
         headers: {
           Authorization: `Bearer ${APP_STATE.apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": window.location.href,
-          "X-Title": "OpenRouter Free AI Chat - Model Comparison",
+          "HTTP-Referer": "https://ai-chat.mezapps.com/",
+          "X-Title": "AIchatApp",
         },
         body: JSON.stringify({
           model: model,
@@ -259,32 +279,80 @@ const UI = {
       return;
     }
 
-    // Clear containers
-    elements.messagesContainerA.innerHTML = "";
-    elements.messagesContainerB.innerHTML = "";
+    if (APP_STATE.chatMode === 'single') {
+      // Single mode rendering
+      if (!elements.messagesContainerSingle) return;
+      elements.messagesContainerSingle.innerHTML = "";
+      
+      conversation.messages.forEach((message) => {
+        // In single mode, show user messages and assistant messages from single mode or panel A
+        if (message.role === "user" || message.panel === 'single' || message.panel === 'A') {
+          const messageEl = this.createMessageElement(message, "single");
+          elements.messagesContainerSingle.appendChild(messageEl);
+        }
+      });
+    } else {
+      // Compare mode rendering
+      if (elements.messagesContainerA) elements.messagesContainerA.innerHTML = "";
+      if (elements.messagesContainerB) elements.messagesContainerB.innerHTML = "";
 
-    // Separate messages by panel
-    conversation.messages.forEach((message) => {
-      if (message.role === "user") {
-        // User messages appear in both panels
-        const messageElA = this.createMessageElement(message, "A");
-        const messageElB = this.createMessageElement(message, "B");
-        elements.messagesContainerA.appendChild(messageElA);
-        elements.messagesContainerB.appendChild(messageElB);
-      } else if (message.panel === "A") {
-        const messageEl = this.createMessageElement(message, "A");
-        elements.messagesContainerA.appendChild(messageEl);
-      } else if (message.panel === "B") {
-        const messageEl = this.createMessageElement(message, "B");
-        elements.messagesContainerB.appendChild(messageEl);
-      }
-    });
+      conversation.messages.forEach((message) => {
+        if (message.role === "user") {
+          // User messages appear in both panels
+          if (elements.messagesContainerA) {
+            const messageElA = this.createMessageElement(message, "A");
+            elements.messagesContainerA.appendChild(messageElA);
+          }
+          if (elements.messagesContainerB) {
+            const messageElB = this.createMessageElement(message, "B");
+            elements.messagesContainerB.appendChild(messageElB);
+          }
+        } else if (message.panel === "A" && elements.messagesContainerA) {
+          const messageEl = this.createMessageElement(message, "A");
+          elements.messagesContainerA.appendChild(messageEl);
+        } else if (message.panel === "B" && elements.messagesContainerB) {
+          const messageEl = this.createMessageElement(message, "B");
+          elements.messagesContainerB.appendChild(messageEl);
+        }
+      });
+    }
 
     this.scrollToBottom();
   },
 
   showWelcomeScreens() {
-    elements.messagesContainerA.innerHTML = `
+    if (APP_STATE.chatMode === 'single') {
+      if (elements.messagesContainerSingle) {
+        elements.messagesContainerSingle.innerHTML = `
+          <div class="welcome-screen">
+            <h2>Welcome to OpenRouter AI Chat! 🚀</h2>
+            <p>Select a model above and start chatting with AI.</p>
+            <div class="feature-grid">
+              <div class="feature-card">
+                <span class="feature-icon">🤖</span>
+                <h3>Multiple Models</h3>
+                <p>Access free and paid AI models</p>
+              </div>
+              <div class="feature-card">
+                <span class="feature-icon">💾</span>
+                <h3>Save History</h3>
+                <p>All chats saved locally</p>
+              </div>
+              <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3>Fast & Simple</h3>
+                <p>Clean interface, no signup</p>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      return;
+    }
+    
+    // Compare mode welcome screens
+    if (elements.messagesContainerA) {
+      elements.messagesContainerA.innerHTML = `
       <div class="welcome-screen">
         <h2>Compare AI Models! 🔄</h2>
         <p>Select two models above and start chatting to compare their responses side-by-side.</p>
@@ -307,8 +375,10 @@ const UI = {
         </div>
       </div>
     `;
+    }
     
-    elements.messagesContainerB.innerHTML = `
+    if (elements.messagesContainerB) {
+      elements.messagesContainerB.innerHTML = `
       <div class="welcome-screen">
         <h2>Ready to Compare! ⚡</h2>
         <p>Type a message below to see how different AI models respond.</p>
@@ -331,6 +401,7 @@ const UI = {
         </div>
       </div>
     `;
+    }
   },
 
   createMessageElement(message, panel) {
@@ -463,7 +534,16 @@ const UI = {
   },
 
   addTypingIndicator(panel) {
-    const container = panel === "A" ? elements.messagesContainerA : elements.messagesContainerB;
+    let container;
+    if (panel === 'single') {
+      container = elements.messagesContainerSingle;
+    } else if (panel === 'A') {
+      container = elements.messagesContainerA;
+    } else {
+      container = elements.messagesContainerB;
+    }
+    if (!container) return;
+    
     const typingEl = document.createElement("div");
     typingEl.className = "message assistant";
     typingEl.id = `typing-indicator-${panel}`;
@@ -490,74 +570,152 @@ const UI = {
   },
 
   scrollToBottom() {
-    elements.messagesContainerA.scrollTop = elements.messagesContainerA.scrollHeight;
-    elements.messagesContainerB.scrollTop = elements.messagesContainerB.scrollHeight;
+    if (APP_STATE.chatMode === 'single') {
+      if (elements.messagesContainerSingle) {
+        elements.messagesContainerSingle.scrollTop = elements.messagesContainerSingle.scrollHeight;
+      }
+    } else {
+      if (elements.messagesContainerA) {
+        elements.messagesContainerA.scrollTop = elements.messagesContainerA.scrollHeight;
+      }
+      if (elements.messagesContainerB) {
+        elements.messagesContainerB.scrollTop = elements.messagesContainerB.scrollHeight;
+      }
+    }
   },
 
   async loadModels() {
     try {
-      elements.modelSelectorA.innerHTML = '<option value="">Loading models...</option>';
-      elements.modelSelectorB.innerHTML = '<option value="">Loading models...</option>';
-
-      const models = await OpenRouterAPI.fetchFreeModels();
-      APP_STATE.availableModels = models;
-
-      elements.modelSelectorA.innerHTML = "";
-      elements.modelSelectorB.innerHTML = "";
-
-      if (models.length === 0) {
-        elements.modelSelectorA.innerHTML = '<option value="">No free models available</option>';
-        elements.modelSelectorB.innerHTML = '<option value="">No free models available</option>';
-        return;
+      // Set loading state on all model selectors
+      if (elements.modelSelectorSingle) {
+        elements.modelSelectorSingle.innerHTML = '<option value="">Loading models...</option>';
+      }
+      if (elements.modelSelectorA) {
+        elements.modelSelectorA.innerHTML = '<option value="">Loading models...</option>';
+      }
+      if (elements.modelSelectorB) {
+        elements.modelSelectorB.innerHTML = '<option value="">Loading models...</option>';
       }
 
-      models.forEach((model) => {
-        const optionA = document.createElement("option");
-        optionA.value = model.id;
-        optionA.textContent = `${model.name || model.id}`;
-        elements.modelSelectorA.appendChild(optionA);
-        
-        const optionB = document.createElement("option");
-        optionB.value = model.id;
-        optionB.textContent = `${model.name || model.id}`;
-        elements.modelSelectorB.appendChild(optionB);
-      });
-
-      // Select previously selected models or default to first two different models
-      if (APP_STATE.selectedModelA && models.find((m) => m.id === APP_STATE.selectedModelA)) {
-        elements.modelSelectorA.value = APP_STATE.selectedModelA;
-      } else {
-        elements.modelSelectorA.value = models[0].id;
-        APP_STATE.selectedModelA = models[0].id;
-        localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
-      }
+      // Fetch all models
+      const allModels = await OpenRouterAPI.fetchAllModels();
+      APP_STATE.allModels = allModels;
       
-      if (APP_STATE.selectedModelB && models.find((m) => m.id === APP_STATE.selectedModelB)) {
-        elements.modelSelectorB.value = APP_STATE.selectedModelB;
-      } else {
-        // Select second model if available, otherwise first
-        const secondModelIndex = models.length > 1 ? 1 : 0;
-        elements.modelSelectorB.value = models[secondModelIndex].id;
-        APP_STATE.selectedModelB = models[secondModelIndex].id;
-        localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
-      }
-      
-      // Update panel labels
-      this.updatePanelLabels();
+      // Apply filter
+      this.applyModelFilter();
     } catch (error) {
       console.error("Error loading models:", error);
-      elements.modelSelectorA.innerHTML = '<option value="">Error loading models</option>';
-      elements.modelSelectorB.innerHTML = '<option value="">Error loading models</option>';
+      if (elements.modelSelectorSingle) {
+        elements.modelSelectorSingle.innerHTML = '<option value="">Error loading models</option>';
+      }
+      if (elements.modelSelectorA) {
+        elements.modelSelectorA.innerHTML = '<option value="">Error loading models</option>';
+      }
+      if (elements.modelSelectorB) {
+        elements.modelSelectorB.innerHTML = '<option value="">Error loading models</option>';
+      }
       this.showError("Failed to load models. Please check your API key.");
     }
   },
   
-  updatePanelLabels() {
-    const modelA = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelA);
-    const modelB = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelB);
+  applyModelFilter() {
+    const models = OpenRouterAPI.filterModels(APP_STATE.allModels, APP_STATE.modelFilter);
+    APP_STATE.availableModels = models;
     
-    elements.panelAModelName.textContent = modelA ? (modelA.name || modelA.id) : "Select a model";
-    elements.panelBModelName.textContent = modelB ? (modelB.name || modelB.id) : "Select a model";
+    // Populate all selectors
+    this.populateModelSelector(elements.modelSelectorSingle, models);
+    this.populateModelSelector(elements.modelSelectorA, models);
+    this.populateModelSelector(elements.modelSelectorB, models);
+    
+    if (models.length === 0) {
+      const filterLabels = { free: 'free', paid: 'paid', all: '' };
+      const msg = `No ${filterLabels[APP_STATE.modelFilter]} models available`;
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.innerHTML = `<option value="">${msg}</option>`;
+      if (elements.modelSelectorA) elements.modelSelectorA.innerHTML = `<option value="">${msg}</option>`;
+      if (elements.modelSelectorB) elements.modelSelectorB.innerHTML = `<option value="">${msg}</option>`;
+      return;
+    }
+    
+    // Restore selections or set defaults
+    // Single mode
+    if (APP_STATE.selectedModelSingle && models.find(m => m.id === APP_STATE.selectedModelSingle)) {
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = APP_STATE.selectedModelSingle;
+    } else {
+      APP_STATE.selectedModelSingle = models[0].id;
+      localStorage.setItem("selected_model_single", APP_STATE.selectedModelSingle);
+      if (elements.modelSelectorSingle) elements.modelSelectorSingle.value = models[0].id;
+    }
+    
+    // Compare mode - Model A
+    if (APP_STATE.selectedModelA && models.find(m => m.id === APP_STATE.selectedModelA)) {
+      if (elements.modelSelectorA) elements.modelSelectorA.value = APP_STATE.selectedModelA;
+    } else {
+      APP_STATE.selectedModelA = models[0].id;
+      localStorage.setItem("selected_model_a", APP_STATE.selectedModelA);
+      if (elements.modelSelectorA) elements.modelSelectorA.value = models[0].id;
+    }
+    
+    // Compare mode - Model B
+    if (APP_STATE.selectedModelB && models.find(m => m.id === APP_STATE.selectedModelB)) {
+      if (elements.modelSelectorB) elements.modelSelectorB.value = APP_STATE.selectedModelB;
+    } else {
+      const secondIdx = models.length > 1 ? 1 : 0;
+      APP_STATE.selectedModelB = models[secondIdx].id;
+      localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
+      if (elements.modelSelectorB) elements.modelSelectorB.value = models[secondIdx].id;
+    }
+    
+    this.updatePanelLabels();
+  },
+  
+  populateModelSelector(selector, models) {
+    if (!selector) return;
+    selector.innerHTML = '';
+    models.forEach(model => {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = model.name || model.id;
+      selector.appendChild(option);
+    });
+  },
+  
+  updateChatMode() {
+    const isSingle = APP_STATE.chatMode === 'single';
+    
+    // Toggle UI elements
+    if (elements.singleModelSelector) {
+      elements.singleModelSelector.style.display = isSingle ? 'flex' : 'none';
+    }
+    if (elements.dualModelSelectors) {
+      elements.dualModelSelectors.style.display = isSingle ? 'none' : 'flex';
+    }
+    if (elements.singleChatContainer) {
+      elements.singleChatContainer.style.display = isSingle ? 'flex' : 'none';
+    }
+    if (elements.comparisonContainer) {
+      elements.comparisonContainer.style.display = isSingle ? 'none' : 'flex';
+    }
+    
+    // Update toggle button states
+    if (elements.chatModeToggle) {
+      elements.chatModeToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === APP_STATE.chatMode);
+      });
+    }
+    
+    // Render messages for current mode
+    this.renderMessages();
+  },
+  
+  updatePanelLabels() {
+    if (elements.panelAModelName) {
+      const modelA = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelA);
+      elements.panelAModelName.textContent = modelA ? (modelA.name || modelA.id) : "Select a model";
+    }
+    if (elements.panelBModelName) {
+      const modelB = APP_STATE.availableModels.find(m => m.id === APP_STATE.selectedModelB);
+      elements.panelBModelName.textContent = modelB ? (modelB.name || modelB.id) : "Select a model";
+    }
   },
 
   showError(message) {
@@ -619,9 +777,17 @@ async function handleSendMessage() {
 
   if (!messageText || APP_STATE.isLoading) return;
 
-  if (!APP_STATE.selectedModelA || !APP_STATE.selectedModelB) {
-    UI.showError("Please select both Model A and Model B");
-    return;
+  // Validate model selection based on mode
+  if (APP_STATE.chatMode === 'single') {
+    if (!APP_STATE.selectedModelSingle) {
+      UI.showError("Please select a model");
+      return;
+    }
+  } else {
+    if (!APP_STATE.selectedModelA || !APP_STATE.selectedModelB) {
+      UI.showError("Please select both Model A and Model B");
+      return;
+    }
   }
 
   // Create conversation if none exists
@@ -630,25 +796,21 @@ async function handleSendMessage() {
     UI.renderConversations();
   }
 
-  // Add user message (appears in both panels)
+  // Add user message
   ConversationManager.addMessage("user", messageText);
   elements.messageInput.value = "";
   elements.messageInput.style.height = "auto";
   UI.renderMessages();
 
-  // Show typing indicators in both panels
-  UI.addTypingIndicator("A");
-  UI.addTypingIndicator("B");
   APP_STATE.isLoading = true;
   elements.sendBtn.disabled = true;
 
-  // Get conversation messages for context (only user and assistant messages)
+  // Get conversation messages for context
   const conversation = ConversationManager.getCurrentConversation();
   const messagesForAPI = conversation.messages
-    .filter(m => m.role === "user" || (m.role === "assistant"))
+    .filter(m => m.role === "user" || m.role === "assistant")
     .reduce((acc, m) => {
       if (m.role === "user") {
-        // Add user message once
         if (!acc.find(msg => msg.content === m.content && msg.role === "user")) {
           acc.push({ role: "user", content: m.content });
         }
@@ -656,36 +818,17 @@ async function handleSendMessage() {
       return acc;
     }, []);
   
-  // Add the current user message
   const currentMessages = [...messagesForAPI];
   if (!currentMessages.find(m => m.content === messageText)) {
     currentMessages.push({ role: "user", content: messageText });
   }
 
-  // Send to both models in parallel with timing
-  const startTimeA = performance.now();
-  const startTimeB = performance.now();
-  
-  const [responseA, responseB] = await Promise.allSettled([
-    OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelA).then(result => {
-      result.timeElapsed = ((performance.now() - startTimeA) / 1000).toFixed(2);
-      return result;
-    }),
-    OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelB).then(result => {
-      result.timeElapsed = ((performance.now() - startTimeB) / 1000).toFixed(2);
-      return result;
-    }),
-  ]);
-
   // Helper to calculate metrics
   function calculateMetrics(response, modelId) {
     const content = response.content;
     const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length;
-    // Estimate tokens: ~4 chars per token for English, or use API response if available
     const tokenCount = response.usage?.completion_tokens || Math.ceil(content.length / 4);
     const promptTokens = response.usage?.prompt_tokens || Math.ceil(messageText.length / 4);
-    
-    // Get pricing (per token, multiply by 1M since OpenRouter shows per million tokens)
     const pricing = OpenRouterAPI.getModelPricing(modelId);
     const cost = ((promptTokens * pricing.prompt) + (tokenCount * pricing.completion)).toFixed(6);
     
@@ -697,32 +840,74 @@ async function handleSendMessage() {
     };
   }
 
-  // Handle Model A response
-  UI.removeTypingIndicator("A");
-  if (responseA.status === "fulfilled") {
-    const metrics = calculateMetrics(responseA.value, APP_STATE.selectedModelA);
-    ConversationManager.addMessage("assistant", responseA.value.content, "A", APP_STATE.selectedModelA, metrics);
+  if (APP_STATE.chatMode === 'single') {
+    // Single mode - send to one model
+    UI.addTypingIndicator('single');
+    
+    const startTime = performance.now();
+    try {
+      const response = await OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelSingle);
+      response.timeElapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+      
+      UI.removeTypingIndicator('single');
+      const metrics = calculateMetrics(response, APP_STATE.selectedModelSingle);
+      ConversationManager.addMessage("assistant", response.content, "single", APP_STATE.selectedModelSingle, metrics);
+    } catch (error) {
+      UI.removeTypingIndicator('single');
+      ConversationManager.addMessage(
+        "assistant",
+        `❌ Error: ${error.message || "Failed to get response"}`,
+        "single",
+        APP_STATE.selectedModelSingle
+      );
+    }
   } else {
-    ConversationManager.addMessage(
-      "assistant",
-      `❌ Error: ${responseA.reason?.message || "Failed to get response"}`,
-      "A",
-      APP_STATE.selectedModelA
-    );
-  }
+    // Compare mode - send to both models in parallel
+    UI.addTypingIndicator("A");
+    UI.addTypingIndicator("B");
 
-  // Handle Model B response
-  UI.removeTypingIndicator("B");
-  if (responseB.status === "fulfilled") {
-    const metrics = calculateMetrics(responseB.value, APP_STATE.selectedModelB);
-    ConversationManager.addMessage("assistant", responseB.value.content, "B", APP_STATE.selectedModelB, metrics);
-  } else {
-    ConversationManager.addMessage(
-      "assistant",
-      `❌ Error: ${responseB.reason?.message || "Failed to get response"}`,
-      "B",
-      APP_STATE.selectedModelB
-    );
+    // Send to both models in parallel with timing
+    const startTimeA = performance.now();
+    const startTimeB = performance.now();
+    
+    const [responseA, responseB] = await Promise.allSettled([
+      OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelA).then(result => {
+        result.timeElapsed = ((performance.now() - startTimeA) / 1000).toFixed(2);
+        return result;
+      }),
+      OpenRouterAPI.sendMessage(currentMessages, APP_STATE.selectedModelB).then(result => {
+        result.timeElapsed = ((performance.now() - startTimeB) / 1000).toFixed(2);
+        return result;
+      }),
+    ]);
+
+    // Handle Model A response
+    UI.removeTypingIndicator("A");
+    if (responseA.status === "fulfilled") {
+      const metrics = calculateMetrics(responseA.value, APP_STATE.selectedModelA);
+      ConversationManager.addMessage("assistant", responseA.value.content, "A", APP_STATE.selectedModelA, metrics);
+    } else {
+      ConversationManager.addMessage(
+        "assistant",
+        `❌ Error: ${responseA.reason?.message || "Failed to get response"}`,
+        "A",
+        APP_STATE.selectedModelA
+      );
+    }
+
+    // Handle Model B response
+    UI.removeTypingIndicator("B");
+    if (responseB.status === "fulfilled") {
+      const metrics = calculateMetrics(responseB.value, APP_STATE.selectedModelB);
+      ConversationManager.addMessage("assistant", responseB.value.content, "B", APP_STATE.selectedModelB, metrics);
+    } else {
+      ConversationManager.addMessage(
+        "assistant",
+        `❌ Error: ${responseB.reason?.message || "Failed to get response"}`,
+        "B",
+        APP_STATE.selectedModelB
+      );
+    }
   }
 
   UI.renderMessages();
@@ -748,6 +933,32 @@ function handleModelChangeB(event) {
   APP_STATE.selectedModelB = event.target.value;
   localStorage.setItem("selected_model_b", APP_STATE.selectedModelB);
   UI.updatePanelLabels();
+}
+
+function handleModelChangeSingle(event) {
+  APP_STATE.selectedModelSingle = event.target.value;
+  localStorage.setItem("selected_model_single", APP_STATE.selectedModelSingle);
+}
+
+function handleChatModeChange(mode) {
+  APP_STATE.chatMode = mode;
+  localStorage.setItem("chat_mode", mode);
+  UI.updateChatMode();
+}
+
+function handleModelFilterChange(filter) {
+  APP_STATE.modelFilter = filter;
+  localStorage.setItem("model_filter", filter);
+  
+  // Update toggle button states
+  if (elements.modelFilterToggle) {
+    elements.modelFilterToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === filter);
+    });
+  }
+  
+  // Re-apply filter to models
+  UI.applyModelFilter();
 }
 
 function handleSaveApiKey() {
@@ -790,11 +1001,26 @@ function handleKeyPress(event) {
 elements.saveApiKeyBtn.addEventListener("click", handleSaveApiKey);
 elements.newConversationBtn.addEventListener("click", handleNewConversation);
 elements.sendBtn.addEventListener("click", handleSendMessage);
-elements.modelSelectorA.addEventListener("change", handleModelChangeA);
-elements.modelSelectorB.addEventListener("change", handleModelChangeB);
+if (elements.modelSelectorA) elements.modelSelectorA.addEventListener("change", handleModelChangeA);
+if (elements.modelSelectorB) elements.modelSelectorB.addEventListener("change", handleModelChangeB);
+if (elements.modelSelectorSingle) elements.modelSelectorSingle.addEventListener("change", handleModelChangeSingle);
 elements.settingsBtn.addEventListener("click", handleSettings);
 elements.messageInput.addEventListener("input", handleTextareaInput);
 elements.messageInput.addEventListener("keypress", handleKeyPress);
+
+// Chat mode toggle buttons
+if (elements.chatModeToggle) {
+  elements.chatModeToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleChatModeChange(btn.dataset.mode));
+  });
+}
+
+// Model filter toggle buttons
+if (elements.modelFilterToggle) {
+  elements.modelFilterToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleModelFilterChange(btn.dataset.filter));
+  });
+}
 
 // Allow Enter to save API key in modal
 elements.apiKeyInput.addEventListener("keypress", (event) => {
@@ -835,6 +1061,9 @@ if (elements.sidebarOverlay) {
 // Initialization
 // ===========================
 async function init() {
+  // Apply saved chat mode on startup
+  UI.updateChatMode();
+  
   // Check if API key exists
   if (!APP_STATE.apiKey) {
     UI.showApiKeyModal();

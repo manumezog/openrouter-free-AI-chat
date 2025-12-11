@@ -92,7 +92,7 @@
 
       <!-- Main Chat Area -->
       <main class="chat-container">
-        <!-- Header with Dual Model Selectors -->
+        <!-- Header with Controls and Model Selectors -->
         <header class="chat-header">
           <!-- Mobile Menu Toggle -->
           <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Menu">
@@ -103,8 +103,50 @@
             </div>
           </button>
           
-          <!-- Dual Model Selectors -->
-          <div class="dual-model-selectors">
+          <!-- Controls Bar -->
+          <div class="controls-bar">
+            <!-- Chat Mode Toggle -->
+            <div class="control-group">
+              <label class="control-label">Mode:</label>
+              <div class="toggle-buttons" id="chat-mode-toggle">
+                <button class="toggle-btn active" data-mode="single" title="Single Model Chat">
+                  💬 Single
+                </button>
+                <button class="toggle-btn" data-mode="compare" title="Compare Two Models">
+                  ⚖️ Compare
+                </button>
+              </div>
+            </div>
+            
+            <!-- Model Filter -->
+            <div class="control-group">
+              <label class="control-label">Models:</label>
+              <div class="toggle-buttons" id="model-filter-toggle">
+                <button class="toggle-btn active" data-filter="free" title="Free Models Only">
+                  🆓 Free
+                </button>
+                <button class="toggle-btn" data-filter="paid" title="Paid Models Only">
+                  💎 Paid
+                </button>
+                <button class="toggle-btn" data-filter="all" title="All Models">
+                  📋 All
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Single Model Selector (for single mode) -->
+          <div class="single-model-selector" id="single-model-selector">
+            <div class="model-selector-container">
+              <label for="model-selector-single">🤖 Model:</label>
+              <select id="model-selector-single" class="model-select">
+                <option value="">Loading models...</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Dual Model Selectors (for compare mode) -->
+          <div class="dual-model-selectors" id="dual-model-selectors" style="display: none;">
             <div class="model-selector-container model-a">
               <label for="model-selector-a">🅰️ Model A:</label>
               <select id="model-selector-a" class="model-select">
@@ -137,8 +179,35 @@
           </div>
         </header>
 
-        <!-- Comparison Container - Split Screen -->
-        <div class="comparison-container">
+        <!-- Single Chat Container (for single mode) -->
+        <div class="single-chat-container" id="single-chat-container">
+          <div id="messages-container-single" class="messages-container">
+            <div class="welcome-screen">
+              <h2>Welcome to OpenRouter AI Chat! 🚀</h2>
+              <p>Select a model above and start chatting with AI.</p>
+              <div class="feature-grid">
+                <div class="feature-card">
+                  <span class="feature-icon">🤖</span>
+                  <h3>Multiple Models</h3>
+                  <p>Access free and paid AI models</p>
+                </div>
+                <div class="feature-card">
+                  <span class="feature-icon">💾</span>
+                  <h3>Save History</h3>
+                  <p>All chats saved locally</p>
+                </div>
+                <div class="feature-card">
+                  <span class="feature-icon">⚡</span>
+                  <h3>Fast & Simple</h3>
+                  <p>Clean interface, no signup</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparison Container - Split Screen (for compare mode) -->
+        <div class="comparison-container" id="comparison-container" style="display: none;">
           <!-- Panel A -->
           <div class="comparison-panel panel-a">
             <div class="panel-header">
