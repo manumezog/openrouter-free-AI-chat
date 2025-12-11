@@ -1,4 +1,4 @@
-# OpenRouter AI Chat ⚡
+# AI Chat Comparator ⚡
 
 A versatile AI chat application with **single chat** and **side-by-side model comparison** modes using [OpenRouter](https://openrouter.ai/). Choose between free and paid models, compare responses in real-time!
 
