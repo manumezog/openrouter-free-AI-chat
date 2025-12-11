@@ -59,6 +59,10 @@ const elements = {
   sidebarOverlay: document.getElementById("sidebar-overlay"),
   mobileMenuToggle: document.getElementById("mobile-menu-toggle"),
   sidebarCloseBtn: document.getElementById("sidebar-close-btn"),
+  // Mobile panel toggle for compare mode
+  mobilePanelToggle: document.getElementById("mobile-panel-toggle"),
+  panelA: document.querySelector(".comparison-panel.panel-a"),
+  panelB: document.querySelector(".comparison-panel.panel-b"),
 };
 
 // ===========================
@@ -1148,6 +1152,11 @@ function handleChatModeChange(mode) {
   APP_STATE.chatMode = mode;
   localStorage.setItem("chat_mode", mode);
   UI.updateChatMode();
+  
+  // Initialize mobile panel state when switching to compare mode
+  if (mode === 'compare') {
+    initMobilePanelState();
+  }
 }
 
 function handleModelFilterChange(filter) {
@@ -1347,11 +1356,51 @@ if (elements.sidebarOverlay) {
 }
 
 // ===========================
+// Mobile Panel Toggle for Compare Mode
+// ===========================
+function handleMobilePanelSwitch(panel) {
+  // Update tab active state
+  if (elements.mobilePanelToggle) {
+    elements.mobilePanelToggle.querySelectorAll('.panel-tab').forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.panel === panel);
+    });
+  }
+  
+  // Switch visible panel
+  if (elements.panelA) {
+    elements.panelA.classList.toggle('mobile-active', panel === 'A');
+  }
+  if (elements.panelB) {
+    elements.panelB.classList.toggle('mobile-active', panel === 'B');
+  }
+  
+  // Store preference
+  APP_STATE.activeMobilePanel = panel;
+}
+
+// Setup mobile panel toggle
+if (elements.mobilePanelToggle) {
+  elements.mobilePanelToggle.querySelectorAll('.panel-tab').forEach(tab => {
+    tab.addEventListener('click', () => handleMobilePanelSwitch(tab.dataset.panel));
+  });
+}
+
+// Initialize mobile panel state (Model A by default)
+function initMobilePanelState() {
+  if (window.innerWidth <= 768 && APP_STATE.chatMode === 'compare') {
+    handleMobilePanelSwitch(APP_STATE.activeMobilePanel || 'A');
+  }
+}
+
+// ===========================
 // Initialization
 // ===========================
 async function init() {
   // Apply saved chat mode on startup
   UI.updateChatMode();
+  
+  // Initialize mobile panel state for compare mode
+  initMobilePanelState();
   
   // Check if API key exists
   if (!APP_STATE.apiKey) {

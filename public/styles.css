@@ -289,7 +289,7 @@ a:hover {
   border-radius: 8px;
   margin-top: 4px;
   box-shadow: var(--shadow-lg);
-  z-index: 1000;
+  z-index: 9999;
   display: none;
 }
 
@@ -452,6 +452,11 @@ a:hover {
 
 .panel-b .panel-header {
   border-left: 3px solid var(--panel-b-accent);
+}
+
+/* Mobile panel toggle - hidden on desktop */
+.mobile-panel-toggle {
+  display: none;
 }
 
 .panel-label {
@@ -1210,12 +1215,38 @@ a:hover {
   .sidebar-header h1 {
     font-size: var(--font-size-lg);
   }
+  
+  /* Chat container mobile - input above responses */
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .chat-header {
+    order: 1;
+  }
+  
+  .input-container {
+    order: 2;
+    position: relative;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .single-chat-container,
+  .comparison-container {
+    order: 3;
+  }
 
   /* Chat header adjustments */
   .chat-header {
-    padding: var(--spacing-sm) var(--spacing-md);
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    align-items: stretch;
+  }
+  
+  .chat-header > * {
+    width: 100%;
   }
 
   .dual-model-selectors {
@@ -1250,21 +1281,171 @@ a:hover {
     display: flex;
     gap: var(--spacing-sm);
   }
+  
+  /* Mobile header layout - top row for menu + settings */
+  .chat-header {
+    position: relative;
+  }
+  
+  .chat-header::before {
+    content: '';
+    display: block;
+    height: 50px;
+  }
+  
+  .mobile-menu-toggle {
+    position: absolute;
+    top: var(--spacing-xs);
+    left: var(--spacing-sm);
+    z-index: 10;
+    font-size: 1.5rem;
+  }
+  
+  .header-actions {
+    position: absolute;
+    right: var(--spacing-sm);
+    top: var(--spacing-xs);
+    z-index: 10;
+  }
+  
+  .header-actions .icon-btn {
+    font-size: 1.25rem;
+  }
+  
+  /* Controls bar mobile layout */
+  .controls-bar {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs);
+    width: 100%;
+  }
+  
+  .control-group {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .control-label {
+    display: none;
+  }
+  
+  .toggle-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .toggle-btn {
+    flex: 1;
+    padding: var(--spacing-xs);
+    font-size: 0.7rem;
+  }
+  
+  /* Single model selector mobile */
+  .single-model-selector {
+    width: 100%;
+    padding: 0 var(--spacing-sm);
+  }
+  
+  .single-model-selector .searchable-dropdown {
+    min-width: 0;
+    width: 100%;
+  }
+  
+  /* Searchable dropdown mobile */
+  .searchable-dropdown {
+    min-width: 0;
+    width: 100%;
+  }
+  
+  .dropdown-input {
+    font-size: 0.8rem;
+    padding: var(--spacing-sm) var(--spacing-xs);
+  }
+  
+  .dropdown-arrow {
+    padding: var(--spacing-sm) var(--spacing-sm);
+  }
+  
+  .dropdown-list {
+    max-height: 200px;
+  }
+  
+  .dropdown-item {
+    padding: var(--spacing-sm);
+    font-size: 0.8rem;
+  }
+  
+  /* Dual model selectors mobile */
+  .dual-model-selectors {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--spacing-xs);
+    padding: 0 var(--spacing-sm);
+  }
+  
+  /* Mobile panel toggle tabs - visible only on mobile */
+  .mobile-panel-toggle {
+    display: flex;
+    gap: 0;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 4px;
+    margin: var(--spacing-sm);
+  }
+  
+  .panel-tab {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-family);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all var(--transition-fast);
+  }
+  
+  .panel-tab.active {
+    background: var(--accent-gradient);
+    color: white;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .panel-tab:not(.active):hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+  }
 
-  /* Comparison container stacks vertically on mobile */
+  /* Comparison container - single panel view on mobile */
   .comparison-container {
     flex-direction: column;
   }
   
-  .panel-a {
+  /* Hide panel headers on mobile - tab indicates which panel */
+  .comparison-panel .panel-header {
+    display: none;
+  }
+  
+  /* Hide inactive panel on mobile */
+  .comparison-panel.panel-a {
+    display: none;
     border-right: none;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: none;
+  }
+  
+  .comparison-panel.panel-b {
+    display: none;
+  }
+  
+  .comparison-panel.mobile-active {
+    display: flex;
+    flex: 1;
   }
   
   .panel-divider {
-    width: 100%;
-    height: 4px;
-    cursor: row-resize;
+    display: none;
   }
   
   .comparison-panel {
@@ -1288,16 +1469,26 @@ a:hover {
   }
 
   .feature-grid {
-    gap: var(--spacing-sm);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-xs);
     max-width: 100%;
   }
 
   .feature-card {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-xs);
+  }
+  
+  .feature-card h3 {
+    font-size: 0.75rem;
+  }
+  
+  .feature-card p {
+    display: none;
   }
 
   .feature-icon {
-    font-size: 1.25rem;
+    font-size: 1rem;
+    margin-bottom: var(--spacing-xs);
   }
 
   /* Messages area */

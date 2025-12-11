@@ -95,12 +95,8 @@
         <!-- Header with Controls and Model Selectors -->
         <header class="chat-header">
           <!-- Mobile Menu Toggle -->
-          <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Open Menu">
-            <div class="hamburger-icon">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
+          <button id="mobile-menu-toggle" class="mobile-menu-toggle" title="Chat History" onclick="document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('active'); document.body.style.overflow='hidden';">
+            💬
           </button>
           
           <!-- Controls Bar -->
@@ -169,18 +165,8 @@
           </div>
           
           <div class="header-actions">
-            <button id="settings-btn" class="icon-btn" title="Settings">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <circle cx="12" cy="12" r="3"></circle>
-                <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
-              </svg>
+            <button id="settings-btn" class="icon-btn" title="API Key Settings">
+              🔑
             </button>
           </div>
         </header>
@@ -214,6 +200,12 @@
 
         <!-- Comparison Container - Split Screen (for compare mode) -->
         <div class="comparison-container" id="comparison-container" style="display: none;">
+          <!-- Mobile Panel Toggle (visible only on mobile) -->
+          <div class="mobile-panel-toggle" id="mobile-panel-toggle">
+            <button class="panel-tab active" data-panel="A">🅰️ Model A</button>
+            <button class="panel-tab" data-panel="B">🅱️ Model B</button>
+          </div>
+          
           <!-- Panel A -->
           <div class="comparison-panel panel-a">
             <div class="panel-header">
@@ -284,7 +276,7 @@
         <div class="input-container">
           <textarea
             id="message-input"
-            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+            placeholder="Write your message here..."
             rows="1"
           ></textarea>
           <button id="send-btn" class="send-btn" title="Send Message">
